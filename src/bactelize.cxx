@@ -16,9 +16,11 @@ int main( int argc, char * argv [] )
     return -1;
     }
 
-  typedef unsigned int       PixelType;
-  const unsigned int          Dimension = 2;
-  typedef itk::Image<PixelType, Dimension > ImageType;
+  typedef unsigned short PixelComponentType;
+  const unsigned int Dimension = 3;
+  const unsigned int Channels = 3;
+  typedef itk::Vector<PixelComponentType, Channels> PixelType;  
+  typedef itk::Image<PixelType, Dimension> ImageType;
 
   typedef typename itk::ImageFileReader< ImageType > ReaderType;
   itk::SCIFIOImageIO::Pointer io = itk::SCIFIOImageIO::New();

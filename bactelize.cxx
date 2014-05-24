@@ -1,3 +1,5 @@
+#include <iostream>
+#include <iomanip>
 #include "itkImageToHistogramFilter.h"
 #include "itkSCIFIOImageIO.h"
 #include "itkImageFileReader.h"
@@ -56,7 +58,7 @@ int main( int argc, char * argv [] )
   typedef HistogramFilterType::HistogramSizeType   SizeType;
   SizeType size( 3 );
 
-  size[0] = 255;        // number of bins for the Red   channel
+  size[0] =  40;        // number of bins for the Red   channel
   size[1] =   1;        // number of bins for the Green channel
   size[2] =   1;        // number of bins for the Blue  channel
   histogramFilter->SetHistogramSize( size );
@@ -79,41 +81,44 @@ int main( int argc, char * argv [] )
   typedef HistogramFilterType::HistogramType  HistogramType;
   const HistogramType * histogram = histogramFilter->GetOutput();
   const unsigned int histogramSize = histogram->Size();
-  std::cout << "Histogram size " << histogramSize << std::endl;
+  std::cout << std::endl << "Histogram size " << histogramSize << std::endl;
  
   unsigned int channel = 0;  // red channel
-  std::cout << "Histogram of the red component" << std::endl;
+  std::cout << std::endl << "Histogram of the red component" << std::endl;
   for( unsigned int bin=0; bin < histogramSize; bin++ )
     {
-    std::cout << "bin = " << bin << " frequency = " << histogram->GetFrequency( bin, channel ) << std::endl;
-    std::cout << "  measurement = " << histogram->GetMeasurement (bin, channel) << std::endl;	
+    std::cout << "bin = " << std::setw(3) << bin << 
+      "      measurement = " << std::setw(8) << std::setprecision(1) << std::setiosflags(std::ios::fixed) <<  histogram->GetMeasurement (bin, channel) <<
+      "      frequency = " << std::setw(8) << histogram->GetFrequency( bin, channel ) << std::endl;	
     }
 
   size[0] =   1;  // number of bins for the Red   channel
-  size[1] = 255;  // number of bins for the Green channel
+  size[1] =  40;  // number of bins for the Green channel
   size[2] =   1;  // number of bins for the Blue  channel
   histogramFilter->SetHistogramSize( size );
   histogramFilter->Update();
   channel = 1;  // green channel
-  std::cout << "Histogram of the green component" << std::endl;
+  std::cout << std::endl << "Histogram of the green component" << std::endl;
   for( unsigned int bin=0; bin < histogramSize; bin++ )
     {
-    std::cout << "bin = " << bin << " frequency = " << histogram->GetFrequency( bin, channel ) << std::endl;
-    std::cout << "  measurement = " << histogram->GetMeasurement (bin, channel) << std::endl;	
+    std::cout << "bin = " << std::setw(3) << bin << 
+      "      measurement = " << std::setw(8) << std::setprecision(1) << std::setiosflags(std::ios::fixed) <<  histogram->GetMeasurement (bin, channel) <<
+      "      frequency = " << std::setw(8) << histogram->GetFrequency( bin, channel ) << std::endl;	
     }
 
   size[0] =   1;  // number of bins for the Red   channel
   size[1] =   1;  // number of bins for the Green channel
-  size[2] = 255;  // number of bins for the Blue  channel
+  size[2] =  40;  // number of bins for the Blue  channel
   histogramFilter->SetHistogramSize( size );
   histogramFilter->Update();
   channel = 2;  // blue channel
-  std::cout << "Histogram of the blue component" << std::endl;
+  std::cout << std::endl << "Histogram of the blue component" << std::endl;
   for( unsigned int bin=0; bin < histogramSize; bin++ )
     {
-    std::cout << "bin = " << bin << " frequency = " << histogram->GetFrequency( bin, channel ) << std::endl;
-    std::cout << "  measurement = " << histogram->GetMeasurement (bin, channel) << std::endl;	
+    std::cout << "bin = " << std::setw(3) << bin << 
+      "      measurement = " << std::setw(8) << std::setprecision(1) << std::setiosflags(std::ios::fixed) <<  histogram->GetMeasurement (bin, channel) <<
+      "      frequency = " << std::setw(8) << histogram->GetFrequency( bin, channel ) << std::endl;	
     }
-
+  std::cout << std::endl;
 
 }

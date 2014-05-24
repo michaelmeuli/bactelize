@@ -8,6 +8,9 @@
 #include "itkRGBPixel.h"
 #include "itkMetaDataObject.h"
 #include "itkStreamingImageFilter.h"
+#include "itksys/SystemTools.hxx"
+#include "QuickView.h"
+
 
 int main( int argc, char * argv [] )
 {
@@ -20,9 +23,10 @@ int main( int argc, char * argv [] )
     }
 
   typedef unsigned short PixelComponentType;
-  const unsigned int Dimension = 3;
-  const unsigned int Channels = 3;
-  typedef itk::Vector<PixelComponentType, Channels> PixelType;  
+  const unsigned int Dimension = 2;
+  typedef unsigned int PixelType;
+//  const unsigned int Channels = 3;
+//  typedef itk::Vector<PixelComponentType, Channels> PixelType;  
   typedef itk::Image<PixelType, Dimension> ImageType;
 
   typedef typename itk::ImageFileReader< ImageType > ReaderType;
@@ -52,6 +56,10 @@ int main( int argc, char * argv [] )
     return -1;
     }
 
+
+
+
+/* 
 
   typedef itk::Statistics::ImageToHistogramFilter<ImageType>   HistogramFilterType;
   HistogramFilterType::Pointer histogramFilter = HistogramFilterType::New();
@@ -88,8 +96,8 @@ int main( int argc, char * argv [] )
   for( unsigned int bin=0; bin < histogramSize; bin++ )
     {
     std::cout << "bin = " << std::setw(3) << bin << 
-      "      measurement = " << std::setw(8) << std::setprecision(1) << std::setiosflags(std::ios::fixed) <<  histogram->GetMeasurement (bin, channel) <<
-      "      frequency = " << std::setw(8) << histogram->GetFrequency( bin, channel ) << std::endl;	
+      "        measurement = " << std::setw(10) << std::setprecision(1) << std::setiosflags(std::ios::fixed) <<  histogram->GetMeasurement (bin, channel) <<
+      "        frequency = " << std::setw(10) << histogram->GetFrequency( bin, channel ) << std::endl;	
     }
 
   size[0] =   1;  // number of bins for the Red   channel
@@ -102,8 +110,8 @@ int main( int argc, char * argv [] )
   for( unsigned int bin=0; bin < histogramSize; bin++ )
     {
     std::cout << "bin = " << std::setw(3) << bin << 
-      "      measurement = " << std::setw(8) << std::setprecision(1) << std::setiosflags(std::ios::fixed) <<  histogram->GetMeasurement (bin, channel) <<
-      "      frequency = " << std::setw(8) << histogram->GetFrequency( bin, channel ) << std::endl;	
+      "        measurement = " << std::setw(10) << std::setprecision(1) << std::setiosflags(std::ios::fixed) <<  histogram->GetMeasurement (bin, channel) <<
+      "        frequency = " << std::setw(10) << histogram->GetFrequency( bin, channel ) << std::endl;	
     }
 
   size[0] =   1;  // number of bins for the Red   channel
@@ -116,9 +124,20 @@ int main( int argc, char * argv [] )
   for( unsigned int bin=0; bin < histogramSize; bin++ )
     {
     std::cout << "bin = " << std::setw(3) << bin << 
-      "      measurement = " << std::setw(8) << std::setprecision(1) << std::setiosflags(std::ios::fixed) <<  histogram->GetMeasurement (bin, channel) <<
-      "      frequency = " << std::setw(8) << histogram->GetFrequency( bin, channel ) << std::endl;	
+      "        measurement = " << std::setw(10) << std::setprecision(1) << std::setiosflags(std::ios::fixed) <<  histogram->GetMeasurement (bin, channel) <<
+      "        frequency = " << std::setw(10) << histogram->GetFrequency( bin, channel ) << std::endl;	
     }
   std::cout << std::endl;
+
+*/
+
+
+
+  ImageType::Pointer image;
+  image = streamer->GetOutput();
+
+  QuickView viewer;
+  viewer.AddImage(image.GetPointer(), true, itksys::SystemTools::GetFilenameName(argv[1]));  
+  viewer.Visualize();
 
 }

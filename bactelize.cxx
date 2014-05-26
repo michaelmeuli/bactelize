@@ -10,18 +10,43 @@
 #include "itkStreamingImageFilter.h"
 #include "itksys/SystemTools.hxx"
 #include "QuickView.h"
+#include "vnl/vnl_math.h"
+#include "itkImageSliceConstIteratorWithIndex.h"
+#include "itkImageLinearIteratorWithIndex.h"
 
 
 int main( int argc, char * argv [] )
 {
 
-  if( argc < 2 )
+  if ( argc < 3 )
     {
-    std::cerr << "Missing command line arguments" << std::endl;
-    std::cerr << "Usage :  Test input-ome-tiff-ImageFileName " << std::endl;
+    std::cerr << "Missing parameters. " << std::endl;
+    std::cerr << "Usage: " << std::endl;
+    std::cerr << argv[0]
+              << " inputImageFile outputImageFile"
+              << std::endl;
     return -1;
     }
 
+
+
+
+  typedef unsigned short              PixelType;
+  typedef itk::Image< PixelType, 2 >  ImageType2D;
+  typedef itk::Image< PixelType, 3 >  ImageType3D;
+
+  typedef itk::ImageLinearIteratorWithIndex< ImageType2D > LinearIteratorType;
+  typedef itk::ImageSliceConstIteratorWithIndex< ImageType3D > SliceIteratorType;
+
+  typedef itk::ImageFileReader< ImageType3D > ReaderType;
+  typedef itk::ImageFileWriter< ImageType2D > WriterType;
+
+
+//  ReaderType::Pointer reader = ReaderType::New();
+//  reader->SetFileName( argv[1] );
+
+
+/*
   typedef unsigned short PixelComponentType;
   const unsigned int Dimension = 2;
   typedef unsigned int PixelType;
@@ -30,6 +55,8 @@ int main( int argc, char * argv [] )
   typedef itk::Image<PixelType, Dimension> ImageType;
 
   typedef typename itk::ImageFileReader< ImageType > ReaderType;
+*/
+
   itk::SCIFIOImageIO::Pointer io = itk::SCIFIOImageIO::New();
   io->DebugOn();
   typename ReaderType::Pointer reader = ReaderType::New();
@@ -39,7 +66,7 @@ int main( int argc, char * argv [] )
   const char * inputFileName  = argv[1];
   reader->SetFileName( inputFileName );
 
-  typedef itk::StreamingImageFilter< ImageType, ImageType > StreamingFilter;
+  typedef itk::StreamingImageFilter< ImageType3D, ImageType3D > StreamingFilter;
   typename StreamingFilter::Pointer streamer = StreamingFilter::New();
   streamer->SetInput( reader->GetOutput() );
   streamer->SetNumberOfStreamDivisions( 4 );
@@ -56,6 +83,106 @@ int main( int argc, char * argv [] )
     return -1;
     }
 
+
+  ImageType3D::ConstPointer inputImage;
+  inputImage = streamer->GetOutput();
+
+//--
+  unsigned int projectionDirection = 2;
+
+  unsigned int i, j;
+  unsigned int direction[2];
+  for (i = 0, j = 0; i < 3; ++i )
+    {
+    if (i != projectionDirection)
+      {
+      direction[j] = i;
+      j++;
+      }
+    }
+
+  ImageType2D::RegionType region;
+  ImageType2D::RegionType::SizeType size;
+  ImageType2D::RegionType::IndexType index;
+
+  ImageType3D::RegionType requestedRegion = inputImage -> GetRequestedRegion();
+
+  index[ direction[0] ]    = requestedRegion.GetIndex()[ direction[0] ];
+  index[ 1- direction[0] ] = requestedRegion.GetIndex()[ direction[1] ];
+  size[ direction[0] ]     = requestedRegion.GetSize()[  direction[0] ];
+  size[ 1- direction[0] ]  = requestedRegion.GetSize()[  direction[1] ];
+
+  region.SetSize( size );
+  region.SetIndex( index );
+
+  ImageType2D::Pointer outputImage = ImageType2D::New();
+
+  outputImage->SetRegions( region );
+  outputImage->Allocate();
+ 
+  SliceIteratorType  inputIt(  inputImage, inputImage->GetRequestedRegion() );
+  LinearIteratorType outputIt( outputImage, outputImage->GetRequestedRegion() );
+
+  inputIt.SetFirstDirection(  direction[1] );
+  inputIt.SetSecondDirection( direction[0] );
+
+  outputIt.SetDirection( 1 - direction[0] );
+
+  outputIt.GoToBegin();
+  while ( ! outputIt.IsAtEnd() )
+    {
+    while ( ! outputIt.IsAtEndOfLine() )
+      {
+      outputIt.Set( itk::NumericTraits<unsigned short>::NonpositiveMin() );
+      ++outputIt;
+      }
+    outputIt.NextLine();
+    }
+
+  inputIt.GoToBegin();
+  outputIt.GoToBegin();
+
+  while( !inputIt.IsAtEnd() )
+    {
+    while ( !inputIt.IsAtEndOfSlice() )
+      {
+      while ( !inputIt.IsAtEndOfLine() )
+        {
+        outputIt.Set( vnl_math_max( outputIt.Get(), inputIt.Get() ));
+        ++inputIt;
+        ++outputIt;
+        }
+      outputIt.NextLine();
+      inputIt.NextLine();
+
+      }
+    outputIt.GoToBegin();
+    inputIt.NextSlice();
+    }
+
+  WriterType::Pointer writer = WriterType::New();
+  writer->SetFileName( argv[2] );
+  writer->SetInput(outputImage);
+  try
+    {
+    writer->Update();
+    }
+  catch ( itk::ExceptionObject &err)
+    {
+    std::cout << "ExceptionObject caught !" << std::endl;
+    std::cout << err << std::endl;
+    return -1;
+    }
+//--
+
+
+
+
+
+
+  QuickView viewer;
+  viewer.AddImage(outputImage.GetPointer(), true, itksys::SystemTools::GetFilenameName(argv[1]));  
+  viewer.Visualize();
 
 
 
@@ -133,11 +260,6 @@ int main( int argc, char * argv [] )
 
 
 
-  ImageType::Pointer image;
-  image = streamer->GetOutput();
 
-  QuickView viewer;
-  viewer.AddImage(image.GetPointer(), true, itksys::SystemTools::GetFilenameName(argv[1]));  
-  viewer.Visualize();
 
 }

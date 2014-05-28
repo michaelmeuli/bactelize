@@ -13,6 +13,7 @@
 #include "vnl/vnl_math.h"
 #include "itkImageSliceConstIteratorWithIndex.h"
 #include "itkImageLinearIteratorWithIndex.h"
+#include "itkVectorIndexSelectionCastImageFilter.h"
 
 
 int main( int argc, char * argv [] )
@@ -29,33 +30,25 @@ int main( int argc, char * argv [] )
     }
 
 
+  typedef unsigned short PixelComponentType;
+  const unsigned int Dimension = 3;
+  const unsigned int Channels = 3;
+  typedef itk::Vector<PixelComponentType, Channels> InputPixelType;  
 
-
-  typedef unsigned short              PixelType;
-  typedef itk::Image< PixelType, 2 >  ImageType2D;
-  typedef itk::Image< PixelType, 3 >  ImageType3D;
+  typedef itk::Image< InputPixelType,      Dimension >    InputImageType;
+  typedef itk::Image< PixelComponentType,  Dimension >    PixelComponentImageType;
+  typedef itk::Image< PixelComponentType, 2 >  ImageType2D;
 
   typedef itk::ImageLinearIteratorWithIndex< ImageType2D > LinearIteratorType;
-  typedef itk::ImageSliceConstIteratorWithIndex< ImageType3D > SliceIteratorType;
-
-  typedef itk::ImageFileReader< ImageType3D > ReaderType;
+  typedef itk::ImageSliceConstIteratorWithIndex< PixelComponentImageType > SliceIteratorType;
+  
+  typedef itk::ImageFileReader< InputImageType  >  ReaderType;
   typedef itk::ImageFileWriter< ImageType2D > WriterType;
 
+  typedef itk::VectorIndexSelectionCastImageFilter<InputImageType,PixelComponentImageType> FilterType;
+  FilterType::Pointer componentExtractor = FilterType::New();
+  componentExtractor->SetIndex( 1 );
 
-//  ReaderType::Pointer reader = ReaderType::New();
-//  reader->SetFileName( argv[1] );
-
-
-/*
-  typedef unsigned short PixelComponentType;
-  const unsigned int Dimension = 2;
-  typedef unsigned int PixelType;
-//  const unsigned int Channels = 3;
-//  typedef itk::Vector<PixelComponentType, Channels> PixelType;  
-  typedef itk::Image<PixelType, Dimension> ImageType;
-
-  typedef typename itk::ImageFileReader< ImageType > ReaderType;
-*/
 
   itk::SCIFIOImageIO::Pointer io = itk::SCIFIOImageIO::New();
   io->DebugOn();
@@ -66,11 +59,10 @@ int main( int argc, char * argv [] )
   const char * inputFileName  = argv[1];
   reader->SetFileName( inputFileName );
 
-  typedef itk::StreamingImageFilter< ImageType3D, ImageType3D > StreamingFilter;
+  typedef itk::StreamingImageFilter< InputImageType, InputImageType > StreamingFilter;
   typename StreamingFilter::Pointer streamer = StreamingFilter::New();
   streamer->SetInput( reader->GetOutput() );
   streamer->SetNumberOfStreamDivisions( 4 );
-
 
   try
     {
@@ -84,10 +76,13 @@ int main( int argc, char * argv [] )
     }
 
 
-  ImageType3D::ConstPointer inputImage;
-  inputImage = streamer->GetOutput();
+  componentExtractor->SetInput( streamer->GetOutput() );
+  componentExtractor->Update();
+  PixelComponentImageType::ConstPointer inputImage;
+  inputImage = componentExtractor->GetOutput();
 
-//--
+
+//----Begin: Maximum intensity porjection
   unsigned int projectionDirection = 2;
 
   unsigned int i, j;
@@ -105,7 +100,7 @@ int main( int argc, char * argv [] )
   ImageType2D::RegionType::SizeType size;
   ImageType2D::RegionType::IndexType index;
 
-  ImageType3D::RegionType requestedRegion = inputImage -> GetRequestedRegion();
+  PixelComponentImageType::RegionType requestedRegion = inputImage -> GetRequestedRegion();
 
   index[ direction[0] ]    = requestedRegion.GetIndex()[ direction[0] ];
   index[ 1- direction[0] ] = requestedRegion.GetIndex()[ direction[1] ];
@@ -173,7 +168,7 @@ int main( int argc, char * argv [] )
     std::cout << err << std::endl;
     return -1;
     }
-//--
+//----End: Maximum intensity porjection
 
 
 

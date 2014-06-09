@@ -1,20 +1,44 @@
-#include <iostream>
-#include <iomanip>
-#include "itkImageToHistogramFilter.h"
+/*=========================================================================
+ *
+ *  Copyright Insight Software Consortium
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0.txt
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *=========================================================================*/
+
 #include "itkSCIFIOImageIO.h"
 #include "itkImageFileReader.h"
 #include "itkImageFileWriter.h"
 #include "itkImage.h"
-#include "itkRGBPixel.h"
-#include "itkMetaDataObject.h"
 #include "itkStreamingImageFilter.h"
+#include "itkMetaDataObject.h"
+#include "itkMetaDataDictionary.h"
+#include "itkImageIOBase.h"
+#include "itkSCIFIOImageIO.h"
+#include "itkExtractImageFilter.h"
 #include "itksys/SystemTools.hxx"
 #include "QuickView.h"
 #include "vnl/vnl_math.h"
 #include "itkImageSliceConstIteratorWithIndex.h"
 #include "itkImageLinearIteratorWithIndex.h"
-#include "itkVectorIndexSelectionCastImageFilter.h"
+#include "itkImageToHistogramFilter.h"
 
+#include <fstream>
+#include <sstream>
+#include <string>
+#include <vector>
+#include <iostream>
+#include <iomanip>
 
 int main( int argc, char * argv [] )
 {
@@ -22,34 +46,18 @@ int main( int argc, char * argv [] )
   if ( argc < 3 )
     {
     std::cerr << "Missing parameters. " << std::endl;
-    std::cerr << "Usage: " << std::endl;
-    std::cerr << argv[0]
-              << " inputImageFile outputImageFile"
-              << std::endl;
+    std::cerr << "Usage: " << argv[0] << " image5DFile" << std::endl;
     return -1;
     }
 
+  typedef unsigned short InputPixelType;
+  typedef itk::Image< InputPixelType, 5 > ImageType5D;
+  typedef itk::Image< InputPixelType, 4 > ImageType4D;
+  typedef itk::Image< InputPixelType, 3 > ImageType3D;
+  typedef itk::Image< InputPixelType, 2 > ImageType2D;
 
-  typedef unsigned short PixelComponentType;
-  const unsigned int Dimension = 3;
-  const unsigned int Channels = 3;
-  typedef itk::Vector<PixelComponentType, Channels> InputPixelType;  
-
-  typedef itk::Image< InputPixelType,      Dimension >    InputImageType;
-  typedef itk::Image< PixelComponentType,  Dimension >    PixelComponentImageType;
-  typedef itk::Image< PixelComponentType, 2 >  ImageType2D;
-
-  typedef itk::ImageLinearIteratorWithIndex< ImageType2D > LinearIteratorType;
-  typedef itk::ImageSliceConstIteratorWithIndex< PixelComponentImageType > SliceIteratorType;
-  
-  typedef itk::ImageFileReader< InputImageType  >  ReaderType;
+  typedef typename itk::ImageFileReader< ImageType5D > ReaderType;
   typedef itk::ImageFileWriter< ImageType2D > WriterType;
-
-  typedef itk::VectorIndexSelectionCastImageFilter<InputImageType,PixelComponentImageType> FilterType;
-  FilterType::Pointer componentExtractor = FilterType::New();
-  componentExtractor->SetIndex( 1 );
-
-
   itk::SCIFIOImageIO::Pointer io = itk::SCIFIOImageIO::New();
   io->DebugOn();
   typename ReaderType::Pointer reader = ReaderType::New();
@@ -59,32 +67,202 @@ int main( int argc, char * argv [] )
   const char * inputFileName  = argv[1];
   reader->SetFileName( inputFileName );
 
-  typedef itk::StreamingImageFilter< InputImageType, InputImageType > StreamingFilter;
+  typedef itk::StreamingImageFilter< ImageType5D, ImageType5D > StreamingFilter;
   typename StreamingFilter::Pointer streamer = StreamingFilter::New();
   streamer->SetInput( reader->GetOutput() );
   streamer->SetNumberOfStreamDivisions( 4 );
 
+  typename ImageType5D::Pointer image5D = ImageType5D::New();
+  image5D = streamer->GetOutput();
+
+  reader->UpdateOutputInformation();
+  io->SetSeries(3);    //set series even if different series file is given as command line argument
+  reader->Modified();
+
   try
     {
-    streamer->Update();
+    image5D->Update();
     }
-  catch( itk::ExceptionObject & excp )
+  catch (itk::ExceptionObject &e)
     {
-    std::cerr << "Problem encoutered while reading image file : " << argv[1] << std::endl;
-    std::cerr << excp << std::endl;
-    return -1;
+    std::cerr << e << std::endl;
+    return EXIT_FAILURE;
     }
 
 
-  componentExtractor->SetInput( streamer->GetOutput() );
-  componentExtractor->Update();
-  PixelComponentImageType::ConstPointer inputImage;
-  inputImage = componentExtractor->GetOutput();
+  // Dump the metadata dictionary
+  std::cout << std::endl;
+  std::cout << "--== Metadata from dictionary ==--" << std::endl;
+  itk::MetaDataDictionary imgMetaDictionary = image5D->GetMetaDataDictionary();
+  std::vector<std::string> imgMetaKeys = imgMetaDictionary.GetKeys();
+  for(std::vector<std::string>::const_iterator itKey = imgMetaKeys.begin();
+      itKey != imgMetaKeys.end(); ++itKey)
+    {
+    std::string tmp;
+    itk::ExposeMetaData<std::string>( imgMetaDictionary, *itKey, tmp );
+    std::cout << "\t" << *itKey << " ---> " << tmp << std::endl;
+    }
+  std::cout << std::endl;
 
 
-//----Begin: Maximum intensity porjection
+  // Dump the metadata naturally contained within ImageIOBase
+  const itk::ImageIOBase * imageIO = reader->GetImageIO();
+  itk::ImageIORegion regionIO = imageIO->GetIORegion();
+  int regionDimIO = regionIO.GetImageDimension();
+  std::cout << "--== Metadata from ImageIOBase ==--" << std::endl;
+  for(int i = 0; i < regionDimIO; i++)
+    {
+    std::cout << "\tDimension " << i + 1 << " Size: "
+              << regionIO.GetSize(i) << std::endl;
+    }
+  for(int i = 0; i < regionDimIO; i++)
+  {
+    if ( regionIO.GetSize(i) > 1 ) {
+      std::cout << "\tSpacing " << i + 1 << ": "
+                << imageIO->GetSpacing(i) << std::endl;
+    }
+  }
+  std::cout << "\tByte Order: "
+            << imageIO->GetByteOrderAsString(imageIO->GetByteOrder())
+            << std::endl;
+  std::cout << "\tPixel Stride: " << imageIO->GetPixelStride() << std::endl;
+  std::cout << "\tPixel Type: "
+            << imageIO->GetPixelTypeAsString(imageIO->GetPixelType())
+            << std::endl;
+  std::cout << "\tImage Size (in pixels): "
+            << imageIO->GetImageSizeInPixels() << std::endl;
+  std::cout << "\tPixel Type: "
+            << imageIO->GetComponentTypeAsString(imageIO->GetComponentType())
+            << std::endl;
+  std::cout << "\tRGB Channel Count: "
+            << imageIO->GetNumberOfComponents() << std::endl;
+  std::cout << "\tNumber of Dimensions: "
+            << imageIO->GetNumberOfDimensions() << std::endl;
+  std::cout << std::endl;
+
+
+  // SetSpacing
+  std::cout << "--== Correcting spacing and setting origin ==--" << std::endl;
+  ImageType5D::SpacingType spacing;
+  spacing[0] = 0.33; // spacing along X
+  spacing[1] = 0.33; // spacing along Y
+  spacing[2] = 1.20; // spacing along Z 
+  spacing[3] = 1.0;
+  spacing[4] = 1.0;
+  image5D->SetSpacing( spacing );
+  ImageType5D::PointType origin;
+  origin.Fill(0.0);
+  image5D->SetOrigin( origin );
+  ImageType5D::RegionType region5D = image5D->GetLargestPossibleRegion();
+  int regionDimIm = region5D.GetImageDimension();
+  const ImageType5D::SpacingType& sp = image5D->GetSpacing();
+  const ImageType5D::PointType& orgn = image5D->GetOrigin();
+  for(int i = 0; i < regionDimIm; i++)
+    {
+    std::cout << "\tDimension " << i + 1 << " Size: "
+              << region5D.GetSize(i) << std::endl;
+    }
+  for(int i = 0; i < regionDimIm; i++)
+  {
+    if ( region5D.GetSize(i) > 1 ) {
+      std::cout << "\tSpacing " << i + 1 << ": "
+                << sp[i] << std::endl;
+    }
+  }
+  for(int i = 0; i < regionDimIm; i++)
+    {
+    std::cout << "\tOrigin " << i + 1 << ": "
+              << orgn[i] << std::endl;
+    }
+  std::cout << std::endl;
+  
+
+  // Get the 3D of second channell
+  typedef itk::ExtractImageFilter< ImageType5D, ImageType4D > ExtractFilterType5D4D;
+  ExtractFilterType5D4D::Pointer extractfilter5D4Dch2 = ExtractFilterType5D4D::New();
+  extractfilter5D4Dch2->InPlaceOn();
+  extractfilter5D4Dch2->SetDirectionCollapseToSubmatrix();
+  ImageType5D::SizeType size5Dch2 = region5D.GetSize();
+  std::cout << "Extract 5D to 4D channell 2: size5Dch2= " 
+	<< size5Dch2[0] << ", " << size5Dch2[1] << ", " << size5Dch2[2] << ", " << size5Dch2[3] << ", " << size5Dch2[4] << std::endl;  
+  size5Dch2[4] = 0;
+  std::cout << "Extract 5D to 4D channell 2: size5Dch2= " 
+	<< size5Dch2[0] << ", " << size5Dch2[1] << ", " << size5Dch2[2] << ", " << size5Dch2[3] << ", " << size5Dch2[4] << std::endl; 
+  ImageType5D::IndexType start5Dch2 = region5D.GetIndex();
+  std::cout << "Extract 5D to 4D channell 2: start5Dch2= " 
+	<< start5Dch2[0] << ", " << start5Dch2[1] << ", " << start5Dch2[2] << ", " << start5Dch2[3] << ", " << start5Dch2[4] << std::endl; 
+  start5Dch2[4] = 1;
+  std::cout << "Extract 5D to 4D channell 2: start5Dch2= " 
+	<< start5Dch2[0] << ", " << start5Dch2[1] << ", " << start5Dch2[2] << ", " << start5Dch2[3] << ", " << start5Dch2[4] << std::endl; 
+  ImageType5D::RegionType region5Dch2;
+  region5Dch2.SetSize(  size5Dch2  );
+  region5Dch2.SetIndex( start5Dch2 );
+  extractfilter5D4Dch2->SetExtractionRegion( region5Dch2 );
+  extractfilter5D4Dch2->SetInput( image5D );
+
+  typedef itk::ExtractImageFilter< ImageType4D, ImageType3D > ExtractFilterType4D3D;
+  ExtractFilterType4D3D::Pointer extractfilter4D3Dt1 = ExtractFilterType4D3D::New();
+  extractfilter4D3Dt1->InPlaceOn();
+  extractfilter4D3Dt1->SetDirectionCollapseToSubmatrix();
+  extractfilter5D4Dch2->Update();
+  ImageType4D::RegionType region4D = extractfilter5D4Dch2->GetOutput()->GetLargestPossibleRegion();
+  ImageType4D::SizeType size4Dt1 = region4D.GetSize();
+  std::cout << "Extract 4D to 3D timepoint 1: size4Dt1= " << size4Dt1[0] << ", " << size4Dt1[1] << ", " << size4Dt1[2] << ", " << size4Dt1[3] << std::endl;  
+  size4Dt1[3] = 0;
+  std::cout << "Extract 4D to 3D timepoint 1: size4Dt1= " << size4Dt1[0] << ", " << size4Dt1[1] << ", " << size4Dt1[2] << ", " << size4Dt1[3] << std::endl;  
+  ImageType4D::IndexType start4Dt1 = region4D.GetIndex();
+  std::cout << "Extract 4D to 3D timepoint 1: start4Dt1= " << start4Dt1[0] << ", " << start4Dt1[1] << ", " << start4Dt1[2] << ", " << start4Dt1[3] << std::endl; 
+  start4Dt1[3] = 0;
+  std::cout << "Extract 4D to 3D timepoint 1: start4Dt1= " << start4Dt1[0] << ", " << start4Dt1[1] << ", " << start4Dt1[2] << ", " << start4Dt1[3] << std::endl; 
+  ImageType4D::RegionType region4Dt1;
+  region4Dt1.SetSize(  size4Dt1  );
+  region4Dt1.SetIndex( start4Dt1 );
+  extractfilter4D3Dt1->SetExtractionRegion( region4Dt1 );
+  extractfilter4D3Dt1->SetInput( extractfilter5D4Dch2->GetOutput() );
+  extractfilter4D3Dt1->Update();
+
+  ImageType3D::ConstPointer inputImageMIP;
+  inputImageMIP = extractfilter4D3Dt1->GetOutput();
+
+
+  // Histogram of second channell
+  typedef itk::Statistics::ImageToHistogramFilter<ImageType3D>   HistogramFilterType;
+  HistogramFilterType::Pointer histogramFilter = HistogramFilterType::New();
+  typedef HistogramFilterType::HistogramSizeType   SizeType;
+  SizeType size( 1 );
+  size[0] =  40;        // number of bins for the green channel
+  histogramFilter->SetHistogramSize( size );
+
+  histogramFilter->SetMarginalScale( 10.0 ); 
+  HistogramFilterType::HistogramMeasurementVectorType lowerBound( 3 );
+  HistogramFilterType::HistogramMeasurementVectorType upperBound( 3 );
+  lowerBound[0] = 0;
+  upperBound[0] = 65536;
+  histogramFilter->SetHistogramBinMinimum( lowerBound );
+  histogramFilter->SetHistogramBinMaximum( upperBound ); 
+  histogramFilter->SetInput(  inputImageMIP  );
+  histogramFilter->Update();
+  
+  typedef HistogramFilterType::HistogramType  HistogramType;
+  const HistogramType * histogram = histogramFilter->GetOutput();
+  const unsigned int histogramSize = histogram->Size();
+  std::cout << std::endl << "Histogram size " << histogramSize << std::endl;
+ 
+  std::cout << std::endl << "Histogram of the green channell" << std::endl;
+  for( unsigned int bin=0; bin < histogramSize; bin++ )
+    {
+    std::cout << "bin = " << std::setw(3) << bin << 
+      "        measurement = " << std::setw(10) << std::setprecision(1) << std::setiosflags(std::ios::fixed) <<  histogram->GetMeasurement (bin, 0) <<
+      "        frequency = " << std::setw(10) << histogram->GetFrequency( bin, 0 ) << std::endl;	
+    }
+
+
+  // Maximum intensity porjection
+  typedef itk::ImageLinearIteratorWithIndex< ImageType2D > LinearIteratorType;
+  typedef itk::ImageSliceConstIteratorWithIndex< ImageType3D > SliceIteratorType;
+
+
   unsigned int projectionDirection = 2;
-
   unsigned int i, j;
   unsigned int direction[2];
   for (i = 0, j = 0; i < 3; ++i )
@@ -95,34 +273,25 @@ int main( int argc, char * argv [] )
       j++;
       }
     }
-
-  ImageType2D::RegionType region;
-  ImageType2D::RegionType::SizeType size;
-  ImageType2D::RegionType::IndexType index;
-
-  PixelComponentImageType::RegionType requestedRegion = inputImage -> GetRequestedRegion();
-
-  index[ direction[0] ]    = requestedRegion.GetIndex()[ direction[0] ];
-  index[ 1- direction[0] ] = requestedRegion.GetIndex()[ direction[1] ];
-  size[ direction[0] ]     = requestedRegion.GetSize()[  direction[0] ];
-  size[ 1- direction[0] ]  = requestedRegion.GetSize()[  direction[1] ];
-
-  region.SetSize( size );
-  region.SetIndex( index );
-
-  ImageType2D::Pointer outputImage = ImageType2D::New();
-
-  outputImage->SetRegions( region );
-  outputImage->Allocate();
+  ImageType2D::RegionType region2DMIP;
+  ImageType2D::RegionType::SizeType size2DMIP;
+  ImageType2D::RegionType::IndexType index2DMIP;
+  ImageType3D::RegionType requestedRegion = inputImageMIP -> GetRequestedRegion();
+  index2DMIP[ direction[0] ]    = requestedRegion.GetIndex()[ direction[0] ];
+  index2DMIP[ 1- direction[0] ] = requestedRegion.GetIndex()[ direction[1] ];
+  size2DMIP[ direction[0] ]     = requestedRegion.GetSize()[  direction[0] ];
+  size2DMIP[ 1- direction[0] ]  = requestedRegion.GetSize()[  direction[1] ];
+  region2DMIP.SetSize( size2DMIP );
+  region2DMIP.SetIndex( index2DMIP );
+  ImageType2D::Pointer outputImageMIP = ImageType2D::New();
+  outputImageMIP->SetRegions( region2DMIP );
+  outputImageMIP->Allocate();
  
-  SliceIteratorType  inputIt(  inputImage, inputImage->GetRequestedRegion() );
-  LinearIteratorType outputIt( outputImage, outputImage->GetRequestedRegion() );
-
+  SliceIteratorType  inputIt(  inputImageMIP, inputImageMIP->GetRequestedRegion() );
+  LinearIteratorType outputIt( outputImageMIP, outputImageMIP->GetRequestedRegion() );
   inputIt.SetFirstDirection(  direction[1] );
   inputIt.SetSecondDirection( direction[0] );
-
   outputIt.SetDirection( 1 - direction[0] );
-
   outputIt.GoToBegin();
   while ( ! outputIt.IsAtEnd() )
     {
@@ -136,7 +305,6 @@ int main( int argc, char * argv [] )
 
   inputIt.GoToBegin();
   outputIt.GoToBegin();
-
   while( !inputIt.IsAtEnd() )
     {
     while ( !inputIt.IsAtEndOfSlice() )
@@ -149,7 +317,6 @@ int main( int argc, char * argv [] )
         }
       outputIt.NextLine();
       inputIt.NextLine();
-
       }
     outputIt.GoToBegin();
     inputIt.NextSlice();
@@ -157,7 +324,7 @@ int main( int argc, char * argv [] )
 
   WriterType::Pointer writer = WriterType::New();
   writer->SetFileName( argv[2] );
-  writer->SetInput(outputImage);
+  writer->SetInput(outputImageMIP);  // todo: rescaling to 8 bit
   try
     {
     writer->Update();
@@ -168,93 +335,15 @@ int main( int argc, char * argv [] )
     std::cout << err << std::endl;
     return -1;
     }
-//----End: Maximum intensity porjection
-
-
 
 
 
 
   QuickView viewer;
-  viewer.AddImage(outputImage.GetPointer(), true, itksys::SystemTools::GetFilenameName(argv[1]));  
+  viewer.AddImage(outputImageMIP.GetPointer(), true, itksys::SystemTools::GetFilenameName(argv[1]));  
   viewer.Visualize();
 
 
 
-/* 
-
-  typedef itk::Statistics::ImageToHistogramFilter<ImageType>   HistogramFilterType;
-  HistogramFilterType::Pointer histogramFilter = HistogramFilterType::New();
-  typedef HistogramFilterType::HistogramSizeType   SizeType;
-  SizeType size( 3 );
-
-  size[0] =  40;        // number of bins for the Red   channel
-  size[1] =   1;        // number of bins for the Green channel
-  size[2] =   1;        // number of bins for the Blue  channel
-  histogramFilter->SetHistogramSize( size );
-
-  histogramFilter->SetMarginalScale( 10.0 ); 
-  HistogramFilterType::HistogramMeasurementVectorType lowerBound( 3 );
-  HistogramFilterType::HistogramMeasurementVectorType upperBound( 3 );
-  lowerBound[0] = 0;
-  lowerBound[1] = 0;
-  lowerBound[2] = 0;
-  upperBound[0] = 65536;
-  upperBound[1] = 65536;
-  upperBound[2] = 65536;
-  histogramFilter->SetHistogramBinMinimum( lowerBound );
-  histogramFilter->SetHistogramBinMaximum( upperBound ); 
-  histogramFilter->SetInput(  streamer->GetOutput()  );
-
-  histogramFilter->Update();
-  
-  typedef HistogramFilterType::HistogramType  HistogramType;
-  const HistogramType * histogram = histogramFilter->GetOutput();
-  const unsigned int histogramSize = histogram->Size();
-  std::cout << std::endl << "Histogram size " << histogramSize << std::endl;
- 
-  unsigned int channel = 0;  // red channel
-  std::cout << std::endl << "Histogram of the red component" << std::endl;
-  for( unsigned int bin=0; bin < histogramSize; bin++ )
-    {
-    std::cout << "bin = " << std::setw(3) << bin << 
-      "        measurement = " << std::setw(10) << std::setprecision(1) << std::setiosflags(std::ios::fixed) <<  histogram->GetMeasurement (bin, channel) <<
-      "        frequency = " << std::setw(10) << histogram->GetFrequency( bin, channel ) << std::endl;	
-    }
-
-  size[0] =   1;  // number of bins for the Red   channel
-  size[1] =  40;  // number of bins for the Green channel
-  size[2] =   1;  // number of bins for the Blue  channel
-  histogramFilter->SetHistogramSize( size );
-  histogramFilter->Update();
-  channel = 1;  // green channel
-  std::cout << std::endl << "Histogram of the green component" << std::endl;
-  for( unsigned int bin=0; bin < histogramSize; bin++ )
-    {
-    std::cout << "bin = " << std::setw(3) << bin << 
-      "        measurement = " << std::setw(10) << std::setprecision(1) << std::setiosflags(std::ios::fixed) <<  histogram->GetMeasurement (bin, channel) <<
-      "        frequency = " << std::setw(10) << histogram->GetFrequency( bin, channel ) << std::endl;	
-    }
-
-  size[0] =   1;  // number of bins for the Red   channel
-  size[1] =   1;  // number of bins for the Green channel
-  size[2] =  40;  // number of bins for the Blue  channel
-  histogramFilter->SetHistogramSize( size );
-  histogramFilter->Update();
-  channel = 2;  // blue channel
-  std::cout << std::endl << "Histogram of the blue component" << std::endl;
-  for( unsigned int bin=0; bin < histogramSize; bin++ )
-    {
-    std::cout << "bin = " << std::setw(3) << bin << 
-      "        measurement = " << std::setw(10) << std::setprecision(1) << std::setiosflags(std::ios::fixed) <<  histogram->GetMeasurement (bin, channel) <<
-      "        frequency = " << std::setw(10) << histogram->GetFrequency( bin, channel ) << std::endl;	
-    }
-  std::cout << std::endl;
-
-*/
-
-
-
-
-
+  return EXIT_SUCCESS;
 }

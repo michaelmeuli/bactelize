@@ -32,6 +32,7 @@
 #include "itkImageSliceConstIteratorWithIndex.h"
 #include "itkImageLinearIteratorWithIndex.h"
 #include "itkImageToHistogramFilter.h"
+#include "itkRescaleIntensityImageFilter.h"
 
 #include <fstream>
 #include <sstream>
@@ -57,7 +58,7 @@ int main( int argc, char * argv [] )
   typedef itk::Image< InputPixelType, 2 > ImageType2D;
 
   typedef typename itk::ImageFileReader< ImageType5D > ReaderType;
-  typedef itk::ImageFileWriter< ImageType2D > WriterType;
+
   itk::SCIFIOImageIO::Pointer io = itk::SCIFIOImageIO::New();
   io->DebugOn();
   typename ReaderType::Pointer reader = ReaderType::New();
@@ -322,9 +323,18 @@ int main( int argc, char * argv [] )
     inputIt.NextSlice();
     }
 
+
+  typedef itk::Image<unsigned char, 2>  ImageTypeWriter;
+  typedef itk::ImageFileWriter< ImageTypeWriter > WriterType;
+  typedef itk::RescaleIntensityImageFilter< ImageType2D, ImageTypeWriter >  RescaleFilterType;
+
+  RescaleFilterType::Pointer rescaleFilter = RescaleFilterType::New();
+  rescaleFilter->SetInput( outputImageMIP ); 
+  rescaleFilter->SetOutputMinimum( 0 );
+  rescaleFilter->SetOutputMaximum( 255 );
   WriterType::Pointer writer = WriterType::New();
   writer->SetFileName( argv[2] );
-  writer->SetInput(outputImageMIP);  // todo: rescaling to 8 bit
+  writer->SetInput(rescaleFilter->GetOutput());
   try
     {
     writer->Update();

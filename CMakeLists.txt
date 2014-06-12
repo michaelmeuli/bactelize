@@ -13,7 +13,7 @@ if(NOT SCIFIO_LOADED)
   message(FATAL_ERROR "SCIFIO module is required but not available.")
 endif() 
 
-add_executable(bactelize MACOSX_BUNDLE bactelize.cxx)
+add_executable(bactelize MACOSX_BUNDLE bactelize.cxx main.cxx)
  
 if( "${ITK_VERSION_MAJOR}" LESS 4 )
   target_link_libraries(bactelize ITKReview ${ITK_LIBRARIES})

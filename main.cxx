@@ -16,6 +16,7 @@
  *
  *=========================================================================*/
 
+
 #include "bactelize.h" 
 
 int main( int argc, char * argv [] )
@@ -27,92 +28,14 @@ int main( int argc, char * argv [] )
     return -1;
     }
 
-  int seriesStart = 0;
-  int seriesEnd = 1;
-
-  itk::SCIFIOImageIO::Pointer io = itk::SCIFIOImageIO::New();
-  io->DebugOn();
-  typename ReaderType::Pointer reader = ReaderType::New();
-  std::cout << "reader->GetUseStreaming(): " << reader->GetUseStreaming() << std::endl;
-  std::cout << "done checking streaming usage" << std::endl;
-  reader->SetImageIO( io );
   const char * inputFileName  = argv[1];
-  reader->SetFileName( inputFileName );
+  SeriesReader seriesreader(inputFileName);
+  ImageType5D::Pointer image5D = seriesreader.get5DImage(0);
+  seriesreader.dumpimageio();
+
+  dumpmetadatadic(image5D);
 
 
-  typename StreamingFilter::Pointer streamer = StreamingFilter::New();
-  streamer->SetInput( reader->GetOutput() );
-  streamer->SetNumberOfStreamDivisions( 4 );
-
-  typename ImageType5D::Pointer image5D = ImageType5D::New();
-  image5D = streamer->GetOutput();
-
-  reader->UpdateOutputInformation();
-  io->SetSeries(seriesStart);    //set series even if different series file is given as command line argument
-  reader->Modified();
-  seriesEnd = io->GetSeriesCount();
-  std::cout << "seriesEnd: " << seriesEnd << std::endl;
-
-  try
-    {
-    image5D->Update();
-    }
-  catch (itk::ExceptionObject &e)
-    {
-    std::cerr << e << std::endl;
-    return EXIT_FAILURE;
-    }
-
-
-  // Dump the metadata dictionary
-  std::cout << std::endl;
-  std::cout << "--== Metadata from dictionary ==--" << std::endl;
-  itk::MetaDataDictionary imgMetaDictionary = image5D->GetMetaDataDictionary();
-  std::vector<std::string> imgMetaKeys = imgMetaDictionary.GetKeys();
-  for(std::vector<std::string>::const_iterator itKey = imgMetaKeys.begin();
-      itKey != imgMetaKeys.end(); ++itKey)
-    {
-    std::string tmp;
-    itk::ExposeMetaData<std::string>( imgMetaDictionary, *itKey, tmp );
-    std::cout << "\t" << *itKey << " ---> " << tmp << std::endl;
-    }
-  std::cout << std::endl;
-
-
-  // Dump the metadata naturally contained within ImageIOBase
-  const itk::ImageIOBase * imageIO = reader->GetImageIO();
-  itk::ImageIORegion regionIO = imageIO->GetIORegion();
-  int regionDimIO = regionIO.GetImageDimension();
-  std::cout << "--== Metadata from ImageIOBase ==--" << std::endl;
-  for(int i = 0; i < regionDimIO; i++)
-    {
-    std::cout << "\tDimension " << i + 1 << " Size: "
-              << regionIO.GetSize(i) << std::endl;
-    }
-  for(int i = 0; i < regionDimIO; i++)
-  {
-    if ( regionIO.GetSize(i) > 1 ) {
-      std::cout << "\tSpacing " << i + 1 << ": "
-                << imageIO->GetSpacing(i) << std::endl;
-    }
-  }
-  std::cout << "\tByte Order: "
-            << imageIO->GetByteOrderAsString(imageIO->GetByteOrder())
-            << std::endl;
-  std::cout << "\tPixel Stride: " << imageIO->GetPixelStride() << std::endl;
-  std::cout << "\tPixel Type: "
-            << imageIO->GetPixelTypeAsString(imageIO->GetPixelType())
-            << std::endl;
-  std::cout << "\tImage Size (in pixels): "
-            << imageIO->GetImageSizeInPixels() << std::endl;
-  std::cout << "\tPixel Type: "
-            << imageIO->GetComponentTypeAsString(imageIO->GetComponentType())
-            << std::endl;
-  std::cout << "\tRGB Channel Count: "
-            << imageIO->GetNumberOfComponents() << std::endl;
-  std::cout << "\tNumber of Dimensions: "
-            << imageIO->GetNumberOfDimensions() << std::endl;
-  std::cout << std::endl;
 
 
   // SetSpacing
@@ -261,8 +184,6 @@ int main( int argc, char * argv [] )
   QuickView viewer;
   viewer.AddImage(outputImageMIP.GetPointer(), true, itksys::SystemTools::GetFilenameName(argv[1]));  
   viewer.Visualize();
-
-
 
   return EXIT_SUCCESS;
 }

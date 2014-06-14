@@ -26,19 +26,33 @@
 #include <iostream>
 #include <iomanip>
 
-  typedef unsigned short InputPixelType;
-  typedef itk::Image< InputPixelType, 5 > ImageType5D;
-  typedef itk::Image< InputPixelType, 4 > ImageType4D;
-  typedef itk::Image< InputPixelType, 3 > ImageType3D;
-  typedef itk::Image< InputPixelType, 2 > ImageType2D;
-  typedef itk::ImageFileReader< ImageType5D > ReaderType;
-  typedef itk::StreamingImageFilter< ImageType5D, ImageType5D > StreamingFilter;
-
-  typedef itk::ImageLinearIteratorWithIndex< ImageType2D > LinearIteratorType;
-  typedef itk::ImageSliceConstIteratorWithIndex< ImageType3D > SliceIteratorType;
+typedef unsigned short InputPixelType;
+typedef itk::Image< InputPixelType, 5 > ImageType5D;
+typedef itk::Image< InputPixelType, 4 > ImageType4D;
+typedef itk::Image< InputPixelType, 3 > ImageType3D;
+typedef itk::Image< InputPixelType, 2 > ImageType2D;
+typedef itk::ImageFileReader< ImageType5D > ReaderType;
+typedef itk::StreamingImageFilter< ImageType5D, ImageType5D > StreamingFilter;
 
 
 ImageType2D::Pointer maxintprojection(ImageType3D::ConstPointer inputImageMIP);
+void dumpmetadatadic(ImageType5D::Pointer image5D);
+
+
+class SeriesReader {   
+  public:
+    SeriesReader(std::string inputFileName);
+    ImageType5D::Pointer get5DImage(int series); 
+    void dumpimageio();
+  private:    
+    itk::SCIFIOImageIO::Pointer m_io;
+    ReaderType::Pointer m_reader;
+    std::string m_inputFileName;
+    StreamingFilter::Pointer m_streamer;
+    ImageType5D::Pointer m_image5D;
+    int m_seriesStart;
+    int m_seriesEnd;
+};
 
 
 #endif

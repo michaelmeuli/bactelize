@@ -27,6 +27,9 @@ int main( int argc, char * argv [] )
     return -1;
     }
 
+  int seriesStart = 0;
+  int seriesEnd = 1;
+
   itk::SCIFIOImageIO::Pointer io = itk::SCIFIOImageIO::New();
   io->DebugOn();
   typename ReaderType::Pointer reader = ReaderType::New();
@@ -45,8 +48,10 @@ int main( int argc, char * argv [] )
   image5D = streamer->GetOutput();
 
   reader->UpdateOutputInformation();
-  io->SetSeries(3);    //set series even if different series file is given as command line argument
+  io->SetSeries(seriesStart);    //set series even if different series file is given as command line argument
   reader->Modified();
+  seriesEnd = io->GetSeriesCount();
+  std::cout << "seriesEnd: " << seriesEnd << std::endl;
 
   try
     {

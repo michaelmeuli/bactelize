@@ -24,102 +24,28 @@ int main( int argc, char * argv [] )
   if ( argc < 3 )
     {
     std::cerr << "Missing parameters. " << std::endl;
-    std::cerr << "Usage: " << argv[0] << " image5DFile" << std::endl;
+    std::cerr << "Usage: " << argv[0] << " series.ome.tiff-file" << " mip-projection-file-of-ch1" << std::endl;
     return -1;
     }
 
+  int seriesnr = 0; 
+  float xspacing = 0.33;
+  float yspacing = 0.33;
+  float zspacing = 1.2;
+  float tspacing = 1.0;
+  float cspacing = 1.0;
+  int nucleichannel      = 0;
+  int bacteriachannel    = 1;
+  int lysotrackerchannel = 2;
+
   const char * inputFileName  = argv[1];
   SeriesReader seriesreader(inputFileName);
-  ImageType5D::Pointer image5D = seriesreader.get5DImage(0);
+  std::cout << "Getting 5D Image of series number: " << seriesnr << std::endl;
+  ImageType5D::Pointer image5D = seriesreader.get5DImage(seriesnr);
   seriesreader.dumpimageio();
-
   dumpmetadatadic(image5D);
-
-
-
-
-  // SetSpacing
-  std::cout << "--== Correcting spacing and setting origin ==--" << std::endl;
-  ImageType5D::SpacingType spacing;
-  spacing[0] = 0.33; // spacing along X
-  spacing[1] = 0.33; // spacing along Y
-  spacing[2] = 1.20; // spacing along Z 
-  spacing[3] = 1.0;
-  spacing[4] = 1.0;
-  image5D->SetSpacing( spacing );
-  ImageType5D::PointType origin;
-  origin.Fill(0.0);
-  image5D->SetOrigin( origin );
-  ImageType5D::RegionType region5D = image5D->GetLargestPossibleRegion();
-  int regionDimIm = region5D.GetImageDimension();
-  const ImageType5D::SpacingType& sp = image5D->GetSpacing();
-  const ImageType5D::PointType& orgn = image5D->GetOrigin();
-  for(int i = 0; i < regionDimIm; i++)
-    {
-    std::cout << "\tDimension " << i + 1 << " Size: "
-              << region5D.GetSize(i) << std::endl;
-    }
-  for(int i = 0; i < regionDimIm; i++)
-  {
-    if ( region5D.GetSize(i) > 1 ) {
-      std::cout << "\tSpacing " << i + 1 << ": "
-                << sp[i] << std::endl;
-    }
-  }
-  for(int i = 0; i < regionDimIm; i++)
-    {
-    std::cout << "\tOrigin " << i + 1 << ": "
-              << orgn[i] << std::endl;
-    }
-  std::cout << std::endl;
-  
-
-  // Get the 3D of second channell
-  typedef itk::ExtractImageFilter< ImageType5D, ImageType4D > ExtractFilterType5D4D;
-  ExtractFilterType5D4D::Pointer extractfilter5D4Dch2 = ExtractFilterType5D4D::New();
-  extractfilter5D4Dch2->InPlaceOn();
-  extractfilter5D4Dch2->SetDirectionCollapseToSubmatrix();
-  ImageType5D::SizeType size5Dch2 = region5D.GetSize();
-  std::cout << "Extract 5D to 4D channell 2: size5Dch2= " 
-	<< size5Dch2[0] << ", " << size5Dch2[1] << ", " << size5Dch2[2] << ", " << size5Dch2[3] << ", " << size5Dch2[4] << std::endl;  
-  size5Dch2[4] = 0;
-  std::cout << "Extract 5D to 4D channell 2: size5Dch2= " 
-	<< size5Dch2[0] << ", " << size5Dch2[1] << ", " << size5Dch2[2] << ", " << size5Dch2[3] << ", " << size5Dch2[4] << std::endl; 
-  ImageType5D::IndexType start5Dch2 = region5D.GetIndex();
-  std::cout << "Extract 5D to 4D channell 2: start5Dch2= " 
-	<< start5Dch2[0] << ", " << start5Dch2[1] << ", " << start5Dch2[2] << ", " << start5Dch2[3] << ", " << start5Dch2[4] << std::endl; 
-  start5Dch2[4] = 1;
-  std::cout << "Extract 5D to 4D channell 2: start5Dch2= " 
-	<< start5Dch2[0] << ", " << start5Dch2[1] << ", " << start5Dch2[2] << ", " << start5Dch2[3] << ", " << start5Dch2[4] << std::endl; 
-  ImageType5D::RegionType region5Dch2;
-  region5Dch2.SetSize(  size5Dch2  );
-  region5Dch2.SetIndex( start5Dch2 );
-  extractfilter5D4Dch2->SetExtractionRegion( region5Dch2 );
-  extractfilter5D4Dch2->SetInput( image5D );
-
-  typedef itk::ExtractImageFilter< ImageType4D, ImageType3D > ExtractFilterType4D3D;
-  ExtractFilterType4D3D::Pointer extractfilter4D3Dt1 = ExtractFilterType4D3D::New();
-  extractfilter4D3Dt1->InPlaceOn();
-  extractfilter4D3Dt1->SetDirectionCollapseToSubmatrix();
-  extractfilter5D4Dch2->Update();
-  ImageType4D::RegionType region4D = extractfilter5D4Dch2->GetOutput()->GetLargestPossibleRegion();
-  ImageType4D::SizeType size4Dt1 = region4D.GetSize();
-  std::cout << "Extract 4D to 3D timepoint 1: size4Dt1= " << size4Dt1[0] << ", " << size4Dt1[1] << ", " << size4Dt1[2] << ", " << size4Dt1[3] << std::endl;  
-  size4Dt1[3] = 0;
-  std::cout << "Extract 4D to 3D timepoint 1: size4Dt1= " << size4Dt1[0] << ", " << size4Dt1[1] << ", " << size4Dt1[2] << ", " << size4Dt1[3] << std::endl;  
-  ImageType4D::IndexType start4Dt1 = region4D.GetIndex();
-  std::cout << "Extract 4D to 3D timepoint 1: start4Dt1= " << start4Dt1[0] << ", " << start4Dt1[1] << ", " << start4Dt1[2] << ", " << start4Dt1[3] << std::endl; 
-  start4Dt1[3] = 0;
-  std::cout << "Extract 4D to 3D timepoint 1: start4Dt1= " << start4Dt1[0] << ", " << start4Dt1[1] << ", " << start4Dt1[2] << ", " << start4Dt1[3] << std::endl; 
-  ImageType4D::RegionType region4Dt1;
-  region4Dt1.SetSize(  size4Dt1  );
-  region4Dt1.SetIndex( start4Dt1 );
-  extractfilter4D3Dt1->SetExtractionRegion( region4Dt1 );
-  extractfilter4D3Dt1->SetInput( extractfilter5D4Dch2->GetOutput() );
-  extractfilter4D3Dt1->Update();
-
-  ImageType3D::ConstPointer inputImageMIP;
-  inputImageMIP = extractfilter4D3Dt1->GetOutput();
+  setspacing(image5D, xspacing, yspacing, zspacing, tspacing, cspacing);
+  ImageType3D::ConstPointer inputImageMIP = extractchannel(image5D, bacteriachannel);
 
 
   // Histogram of second channell

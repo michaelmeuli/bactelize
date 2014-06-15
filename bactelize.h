@@ -33,10 +33,14 @@ typedef itk::Image< InputPixelType, 3 > ImageType3D;
 typedef itk::Image< InputPixelType, 2 > ImageType2D;
 typedef itk::ImageFileReader< ImageType5D > ReaderType;
 typedef itk::StreamingImageFilter< ImageType5D, ImageType5D > StreamingFilter;
+typedef itk::ExtractImageFilter< ImageType5D, ImageType4D > ExtractFilterType5D4D;
+typedef itk::ExtractImageFilter< ImageType4D, ImageType3D > ExtractFilterType4D3D;
 
 
 ImageType2D::Pointer maxintprojection(ImageType3D::ConstPointer inputImageMIP);
 void dumpmetadatadic(ImageType5D::Pointer image5D);
+void setspacing(ImageType5D::Pointer image5D, float x, float y, float z, float t, float c);
+ImageType3D::ConstPointer extractchannel(ImageType5D::Pointer image5D, int channelnr);
 
 
 class SeriesReader {   

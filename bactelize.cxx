@@ -5,9 +5,7 @@
 typedef itk::ImageLinearIteratorWithIndex< ImageType2D > LinearIteratorType;
 typedef itk::ImageSliceConstIteratorWithIndex< ImageType3D > SliceIteratorType;
 
-ImageType2D::Pointer maxintprojection(ImageType3D::ConstPointer inputImageMIP) {
-
-  unsigned int projectionDirection = 2;
+ImageType2D::Pointer maxintprojection(ImageType3D::ConstPointer inputImageMIP, unsigned int projectionDirection) {
   unsigned int i, j;
   unsigned int direction[2];
   for (i = 0, j = 0; i < 3; ++i )
@@ -70,7 +68,6 @@ ImageType2D::Pointer maxintprojection(ImageType3D::ConstPointer inputImageMIP) {
   }
 
 
-
 void dumpmetadatadic(ImageType5D::Pointer image5D) {
   // Dump the metadata dictionary
   std::cout << std::endl;
@@ -86,7 +83,6 @@ void dumpmetadatadic(ImageType5D::Pointer image5D) {
     }
   std::cout << std::endl;
   }
-
 
 
 void setspacing(ImageType5D::Pointer image5D, float x, float y, float z, float t, float c) {
@@ -174,6 +170,32 @@ ImageType3D::ConstPointer extractchannel(ImageType5D::Pointer image5D, int chann
   return extractfilter4D3Dt1->GetOutput();
   }
 
+
+void printHistogram(ImageType3D::ConstPointer inputImageMIP) {
+  HistogramFilterType::Pointer histogramFilter = HistogramFilterType::New();
+  typedef HistogramFilterType::HistogramSizeType   SizeType;
+  SizeType size( 1 );
+  size[0] =  40;        // number of bins for the green channel
+  histogramFilter->SetHistogramSize( size );
+  histogramFilter->SetMarginalScale( 10.0 ); 
+  HistogramFilterType::HistogramMeasurementVectorType lowerBound( 1 );
+  HistogramFilterType::HistogramMeasurementVectorType upperBound( 1 );
+  lowerBound[0] = 0;
+  upperBound[0] = 4095;
+  histogramFilter->SetHistogramBinMinimum( lowerBound );
+  histogramFilter->SetHistogramBinMaximum( upperBound ); 
+  histogramFilter->SetInput(  inputImageMIP  );
+  histogramFilter->Update();
+  const HistogramType * histogram = histogramFilter->GetOutput();
+  const unsigned int histogramSize = histogram->Size();
+  std::cout << std::endl << "Histogram size " << histogramSize << std::endl;
+  for( unsigned int bin=0; bin < histogramSize; bin++ )
+    {
+    std::cout << "bin = " << std::setw(3) << bin << 
+      "        measurement = " << std::setw(10) << std::setprecision(1) << std::setiosflags(std::ios::fixed) <<  histogram->GetMeasurement (bin, 0) <<
+      "        frequency = " << std::setw(10) << histogram->GetFrequency( bin, 0 ) << std::endl;    
+    }    
+  }
 
 
 SeriesReader::SeriesReader(std::string inputFileName)

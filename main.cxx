@@ -19,24 +19,26 @@
 
 #include "bactelize.h" 
 
+
+int seriesnr = 0; 
+float xspacing = 0.33;
+float yspacing = 0.33;
+float zspacing = 1.2;
+float tspacing = 1.0;
+float cspacing = 1.0;
+int nucleichannel      = 0;
+int bacteriachannel    = 1;
+int lysotrackerchannel = 2;
+
+
 int main( int argc, char * argv [] )
 {
   if ( argc < 3 )
     {
     std::cerr << "Missing parameters. " << std::endl;
-    std::cerr << "Usage: " << argv[0] << " series.ome.tiff-file" << " mip-projection-file-of-ch1" << std::endl;
+    std::cerr << "Usage: " << argv[0] << " series.ome.tiff-file" << " outputdirectory" << std::endl;
     return -1;
     }
-
-  int seriesnr = 0; 
-  float xspacing = 0.33;
-  float yspacing = 0.33;
-  float zspacing = 1.2;
-  float tspacing = 1.0;
-  float cspacing = 1.0;
-  int nucleichannel      = 0;
-  int bacteriachannel    = 1;
-  int lysotrackerchannel = 2;
 
   const char * inputFileName  = argv[1];
   SeriesReader seriesreader(inputFileName);
@@ -45,53 +47,19 @@ int main( int argc, char * argv [] )
   seriesreader.dumpimageio();
   dumpmetadatadic(image5D);
   setspacing(image5D, xspacing, yspacing, zspacing, tspacing, cspacing);
-  ImageType3D::ConstPointer inputImageMIP = extractchannel(image5D, bacteriachannel);
+  ImageType3D::ConstPointer image3Dbacteria = extractchannel(image5D, bacteriachannel);
+  printHistogram(image3Dbacteria);
+  ImageType2D::Pointer image2Dbacteria = maxintprojection(image3Dbacteria);
 
-
-  // Histogram of second channell
-  typedef itk::Statistics::ImageToHistogramFilter<ImageType3D>   HistogramFilterType;
-  HistogramFilterType::Pointer histogramFilter = HistogramFilterType::New();
-  typedef HistogramFilterType::HistogramSizeType   SizeType;
-  SizeType size( 1 );
-  size[0] =  40;        // number of bins for the green channel
-  histogramFilter->SetHistogramSize( size );
-
-  histogramFilter->SetMarginalScale( 10.0 ); 
-  HistogramFilterType::HistogramMeasurementVectorType lowerBound( 3 );
-  HistogramFilterType::HistogramMeasurementVectorType upperBound( 3 );
-  lowerBound[0] = 0;
-  upperBound[0] = 65536;
-  histogramFilter->SetHistogramBinMinimum( lowerBound );
-  histogramFilter->SetHistogramBinMaximum( upperBound ); 
-  histogramFilter->SetInput(  inputImageMIP  );
-  histogramFilter->Update();
-  
-  typedef HistogramFilterType::HistogramType  HistogramType;
-  const HistogramType * histogram = histogramFilter->GetOutput();
-  const unsigned int histogramSize = histogram->Size();
-  std::cout << std::endl << "Histogram size " << histogramSize << std::endl;
- 
-  std::cout << std::endl << "Histogram of the green channell" << std::endl;
-  for( unsigned int bin=0; bin < histogramSize; bin++ )
-    {
-    std::cout << "bin = " << std::setw(3) << bin << 
-      "        measurement = " << std::setw(10) << std::setprecision(1) << std::setiosflags(std::ios::fixed) <<  histogram->GetMeasurement (bin, 0) <<
-      "        frequency = " << std::setw(10) << histogram->GetFrequency( bin, 0 ) << std::endl;	
-    }
-
-
-  ImageType2D::Pointer outputImageMIP = maxintprojection(inputImageMIP);
-
-  typedef itk::Image<unsigned char, 2>  ImageTypeWriter;
-  typedef itk::ImageFileWriter< ImageTypeWriter > WriterType;
-  typedef itk::RescaleIntensityImageFilter< ImageType2D, ImageTypeWriter >  RescaleFilterType;
-
-  RescaleFilterType::Pointer rescaleFilter = RescaleFilterType::New();
-  rescaleFilter->SetInput( outputImageMIP ); 
+  RescaleFilterTypeWriter::Pointer rescaleFilter = RescaleFilterTypeWriter::New();
+  rescaleFilter->SetInput( image2Dbacteria ); 
   rescaleFilter->SetOutputMinimum( 0 );
   rescaleFilter->SetOutputMaximum( 255 );
   WriterType::Pointer writer = WriterType::New();
-  writer->SetFileName( argv[2] );
+  std::string outputdirectory = argv[2];
+  std::string filename = itksys::SystemTools::GetFilenameName(argv[1]);
+  std::string filenamepath = outputdirectory + filename; 
+  writer->SetFileName( filenamepath );             //seriesnumber has to be added
   writer->SetInput(rescaleFilter->GetOutput());
   try
     {
@@ -104,11 +72,13 @@ int main( int argc, char * argv [] )
     return -1;
     }
 
-
+  NormalizeFilterType::Pointer  normalizeFilter = NormalizeFilterType::New();
+  normalizeFilter->SetInput( image3Dbacteria );
+  normalizeFilter->Update();
 
 
   QuickView viewer;
-  viewer.AddImage(outputImageMIP.GetPointer(), true, itksys::SystemTools::GetFilenameName(argv[1]));  
+  viewer.AddImage(image2Dbacteria.GetPointer(), true, itksys::SystemTools::GetFilenameName(argv[1]));  
   viewer.Visualize();
 
   return EXIT_SUCCESS;

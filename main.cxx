@@ -20,7 +20,7 @@
 #include "bactelize.h" 
 
 
-int seriesnr = 0; 
+
 float xspacing = 0.33;
 float yspacing = 0.33;
 float zspacing = 1.2;
@@ -39,38 +39,27 @@ int main( int argc, char * argv [] )
     std::cerr << "Usage: " << argv[0] << " series.ome.tiff-file" << " outputdirectory" << std::endl;
     return -1;
     }
+    
 
-  const char * inputFileName  = argv[1];
-  SeriesReader seriesreader(inputFileName);
+  std::string fullinputfilename = argv[1];
+  std::string outputdirectory = argv[2];
+  int seriesnr = 1; 
+
+  SeriesReader seriesreader(fullinputfilename);
   std::cout << "Getting 5D Image of series number: " << seriesnr << std::endl;
   ImageType5D::Pointer image5D = seriesreader.get5DImage(seriesnr);
   seriesreader.dumpimageio();
   dumpmetadatadic(image5D);
   setspacing(image5D, xspacing, yspacing, zspacing, tspacing, cspacing);
+
   ImageType3D::ConstPointer image3Dbacteria = extractchannel(image5D, bacteriachannel);
   printHistogram(image3Dbacteria);
   ImageType2D::Pointer image2Dbacteria = maxintprojection(image3Dbacteria);
-
-  RescaleFilterTypeWriter::Pointer rescaleFilter = RescaleFilterTypeWriter::New();
-  rescaleFilter->SetInput( image2Dbacteria ); 
-  rescaleFilter->SetOutputMinimum( 0 );
-  rescaleFilter->SetOutputMaximum( 255 );
-  WriterType::Pointer writer = WriterType::New();
-  std::string outputdirectory = argv[2];
-  std::string filename = itksys::SystemTools::GetFilenameName(argv[1]);
-  std::string filenamepath = outputdirectory + filename; 
-  writer->SetFileName( filenamepath );             //seriesnumber has to be added
-  writer->SetInput(rescaleFilter->GetOutput());
-  try
-    {
-    writer->Update();
-    }
-  catch ( itk::ExceptionObject &err)
-    {
-    std::cout << "ExceptionObject caught !" << std::endl;
-    std::cout << err << std::endl;
-    return -1;
-    }
+  std::string outputfilename2Dbacteria = seriesreader.getFilename(seriesnr, "_bacteria");
+  std::string fulloutputfilename2Dbacteria = outputdirectory + outputfilename2Dbacteria; 
+  std::cout << "Writing file: " << fulloutputfilename2Dbacteria << " ..." << std::endl;
+  write2D(image2Dbacteria, fulloutputfilename2Dbacteria);
+  
 
   NormalizeFilterType::Pointer  normalizeFilter = NormalizeFilterType::New();
   normalizeFilter->SetInput( image3Dbacteria );

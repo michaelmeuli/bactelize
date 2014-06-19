@@ -50,6 +50,7 @@ void dumpmetadatadic(ImageType5D::Pointer image5D);
 void setspacing(ImageType5D::Pointer image5D, float x, float y, float z, float t, float c);
 ImageType3D::ConstPointer extractchannel(ImageType5D::Pointer image5D, int channelnr);
 void printHistogram(ImageType3D::ConstPointer);
+void write2D(ImageType2D::Pointer, std::string filenamepath);
 
 
 class SeriesReader {   
@@ -57,6 +58,10 @@ class SeriesReader {
     SeriesReader(std::string inputFileName);
     ImageType5D::Pointer get5DImage(int series); 
     void dumpimageio();
+    int getSeriesStart();
+    int getSeriesEnd();
+    std::string getFilename(int seriesnr, std::string suffix);
+
   private:    
     itk::SCIFIOImageIO::Pointer m_io;
     ReaderType::Pointer m_reader;

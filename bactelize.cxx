@@ -198,6 +198,18 @@ void printHistogram(ImageType3D::ConstPointer inputImageMIP) {
   }
 
 
+void write2D(ImageType2D::Pointer image2Dbacteria, std::string filenamepath) {
+  RescaleFilterTypeWriter::Pointer rescaleFilter = RescaleFilterTypeWriter::New();
+  rescaleFilter->SetInput( image2Dbacteria ); 
+  rescaleFilter->SetOutputMinimum( 0 );
+  rescaleFilter->SetOutputMaximum( 255 );
+  WriterType::Pointer writer = WriterType::New();
+  writer->SetFileName( filenamepath );             
+  writer->SetInput(rescaleFilter->GetOutput());
+  writer->Update();
+  }
+
+
 SeriesReader::SeriesReader(std::string inputFileName)
         : m_io(itk::SCIFIOImageIO::New()), m_reader(ReaderType::New()), m_inputFileName(inputFileName),
           m_streamer(StreamingFilter::New()), m_image5D(ImageType5D::New()), m_seriesStart(0), m_seriesEnd(1) {
@@ -258,4 +270,39 @@ void SeriesReader::dumpimageio() {
   std::cout << std::endl;
   }
 
+int SeriesReader::getSeriesStart() {
+  return m_seriesStart;
+  }
 
+int SeriesReader::getSeriesEnd() {
+  return m_seriesEnd;
+  }
+
+
+std::string SeriesReader::getFilename(int seriesnr, std::string suffix) {
+  std::string inputfilename = itksys::SystemTools::GetFilenameName(m_inputFileName);   
+  std::string filenamebase = inputfilename.substr(0, inputfilename.find_first_of('.'));
+  int seriesCount = m_seriesEnd - m_seriesStart;
+  int sigFigs = 0;
+  while (seriesCount >= 10) {
+    seriesCount /= 10;
+    sigFigs++;
+    }
+  std::string filename = filenamebase;
+  std::stringstream ssout;
+  ssout << '_';
+  int currentSigFigs = 0;
+  int currentSeries = seriesnr;
+  while (currentSeries >= 10) {
+    currentSeries /= 10;
+    currentSigFigs++;
+    }
+  for (int i=0; i<(sigFigs - currentSigFigs); i++) {
+    ssout << 0;
+    }
+  ssout << seriesnr;
+  ssout << suffix;
+  ssout << ".tiff";
+  filename.append(ssout.str());
+  return filename;
+  }

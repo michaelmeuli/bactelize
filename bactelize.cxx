@@ -70,7 +70,6 @@ ImageType2D::Pointer maxintprojection(ImageType3D::ConstPointer inputImageMIP, u
 
 void dumpmetadatadic(ImageType5D::Pointer image5D) {
   // Dump the metadata dictionary
-  std::cout << std::endl;
   std::cout << "--== Metadata from dictionary ==--" << std::endl;
   itk::MetaDataDictionary imgMetaDictionary = image5D->GetMetaDataDictionary();
   std::vector<std::string> imgMetaKeys = imgMetaDictionary.GetKeys();
@@ -224,6 +223,7 @@ SeriesReader::SeriesReader(std::string inputFileName)
     m_reader->UpdateOutputInformation();
     m_seriesEnd = m_io->GetSeriesCount();
     std::cout << "Number of series: " << m_seriesEnd + 1 << std::endl;
+    std::cout << std::endl;
     }
 
 ImageType5D::Pointer SeriesReader::get5DImage(int series) {

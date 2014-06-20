@@ -59,15 +59,25 @@ int main( int argc, char * argv [] )
   std::string fulloutputfilename2Dbacteria = outputdirectory + outputfilename2Dbacteria; 
   std::cout << "Writing file: " << fulloutputfilename2Dbacteria << " ..." << std::endl;
   write2D(image2Dbacteria, fulloutputfilename2Dbacteria);
-  
 
   NormalizeFilterType::Pointer  normalizeFilter = NormalizeFilterType::New();
   normalizeFilter->SetInput( image3Dbacteria );
-  normalizeFilter->Update();
-
+  RescaleFilterTypeNormalized::Pointer rescaleNormalized = RescaleFilterTypeNormalized::New();
+  rescaleNormalized->SetInput( normalizeFilter->GetOutput() ); 
+  rescaleNormalized->SetOutputMinimum( 0 );
+  rescaleNormalized->SetOutputMaximum( 4095 );
+  rescaleNormalized->Update();
+  ImageType3D::ConstPointer image3DbacteriaNormalized = rescaleNormalized->GetOutput();
+  printHistogram(image3DbacteriaNormalized);
+  ImageType2D::Pointer image2DbacteriaNormalized = maxintprojection(image3DbacteriaNormalized);
+  std::string outputfilename2DbacteriaNormalized = seriesreader.getFilename(seriesnr, "_bacteria_normalized");
+  std::string fulloutputfilename2DbacteriaNormalized = outputdirectory + outputfilename2DbacteriaNormalized; 
+  std::cout << "Writing file: " << fulloutputfilename2DbacteriaNormalized << " ..." << std::endl;
+  write2D(image2DbacteriaNormalized, fulloutputfilename2DbacteriaNormalized);
 
   QuickView viewer;
-  viewer.AddImage(image2Dbacteria.GetPointer(), true, itksys::SystemTools::GetFilenameName(argv[1]));  
+  viewer.AddImage(image2Dbacteria.GetPointer(), true, outputfilename2Dbacteria); 
+  viewer.AddImage(image2DbacteriaNormalized.GetPointer(), true, outputfilename2DbacteriaNormalized);  
   viewer.Visualize();
 
   return EXIT_SUCCESS;

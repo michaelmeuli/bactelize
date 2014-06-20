@@ -32,17 +32,18 @@ typedef itk::Image< InputPixelType, 5 > ImageType5D;
 typedef itk::Image< InputPixelType, 4 > ImageType4D;
 typedef itk::Image< InputPixelType, 3 > ImageType3D;
 typedef itk::Image< InputPixelType, 2 > ImageType2D;
-typedef itk::Image< float, 3 >   FloatImageType3D;
+typedef itk::Image< double, 3 >   DoubleImageType3D;
 typedef itk::ImageFileReader< ImageType5D > ReaderType;
 typedef itk::StreamingImageFilter< ImageType5D, ImageType5D > StreamingFilter;
 typedef itk::ExtractImageFilter< ImageType5D, ImageType4D > ExtractFilterType5D4D;
 typedef itk::ExtractImageFilter< ImageType4D, ImageType3D > ExtractFilterType4D3D;
 typedef itk::Statistics::ImageToHistogramFilter<ImageType3D>   HistogramFilterType;
 typedef HistogramFilterType::HistogramType  HistogramType;
-typedef itk::NormalizeImageFilter< ImageType3D, FloatImageType3D >  NormalizeFilterType;
+typedef itk::NormalizeImageFilter< ImageType3D, DoubleImageType3D >  NormalizeFilterType;
 typedef itk::Image<unsigned char, 2>  ImageTypeWriter;
 typedef itk::ImageFileWriter< ImageTypeWriter > WriterType;
 typedef itk::RescaleIntensityImageFilter< ImageType2D, ImageTypeWriter >  RescaleFilterTypeWriter;
+typedef itk::RescaleIntensityImageFilter< DoubleImageType3D, ImageType3D >  RescaleFilterTypeNormalized;
 
 
 ImageType2D::Pointer maxintprojection(ImageType3D::ConstPointer, unsigned int projectionDirection = 2);

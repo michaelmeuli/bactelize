@@ -19,6 +19,8 @@
 #include "itkImageToHistogramFilter.h"
 #include "itkRescaleIntensityImageFilter.h"
 #include "itkNormalizeImageFilter.h"
+#include "itkMedianImageFilter.h"
+#include "itkBinaryThresholdImageFilter.h"
 
 #include <fstream>
 #include <sstream>
@@ -27,12 +29,15 @@
 #include <iostream>
 #include <iomanip>
 
+
 typedef unsigned short InputPixelType;
+typedef unsigned char  BinaryPixelType;
 typedef itk::Image< InputPixelType, 5 > ImageType5D;
 typedef itk::Image< InputPixelType, 4 > ImageType4D;
 typedef itk::Image< InputPixelType, 3 > ImageType3D;
 typedef itk::Image< InputPixelType, 2 > ImageType2D;
 typedef itk::Image< double, 3 >   DoubleImageType3D;
+//typedef itk::Image< BinaryPixelType, 3 >   BinaryImageType;
 typedef itk::ImageFileReader< ImageType5D > ReaderType;
 typedef itk::StreamingImageFilter< ImageType5D, ImageType5D > StreamingFilter;
 typedef itk::ExtractImageFilter< ImageType5D, ImageType4D > ExtractFilterType5D4D;
@@ -44,6 +49,8 @@ typedef itk::Image<unsigned char, 2>  ImageTypeWriter;
 typedef itk::ImageFileWriter< ImageTypeWriter > WriterType;
 typedef itk::RescaleIntensityImageFilter< ImageType2D, ImageTypeWriter >  RescaleFilterTypeWriter;
 typedef itk::RescaleIntensityImageFilter< DoubleImageType3D, ImageType3D >  RescaleFilterTypeNormalized;
+typedef itk::MedianImageFilter< ImageType3D, ImageType3D > MedianFilterType;
+typedef itk::BinaryThresholdImageFilter< ImageType3D, ImageType3D >  BinaryFilterType;
 
 
 ImageType2D::Pointer maxintprojection(ImageType3D::ConstPointer, unsigned int projectionDirection = 2);

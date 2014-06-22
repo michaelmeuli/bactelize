@@ -64,20 +64,31 @@ int main( int argc, char * argv [] )
   normalizeFilter->SetInput( image3Dbacteria );
   RescaleFilterTypeNormalized::Pointer rescaleNormalized = RescaleFilterTypeNormalized::New();
   rescaleNormalized->SetInput( normalizeFilter->GetOutput() ); 
-  rescaleNormalized->SetOutputMinimum( 0 );
-  rescaleNormalized->SetOutputMaximum( 4095 );
-  rescaleNormalized->Update();
-  ImageType3D::ConstPointer image3DbacteriaNormalized = rescaleNormalized->GetOutput();
-  printHistogram(image3DbacteriaNormalized);
-  ImageType2D::Pointer image2DbacteriaNormalized = maxintprojection(image3DbacteriaNormalized);
-  std::string outputfilename2DbacteriaNormalized = seriesreader.getFilename(seriesnr, "_bacteria_normalized");
-  std::string fulloutputfilename2DbacteriaNormalized = outputdirectory + outputfilename2DbacteriaNormalized; 
-  std::cout << "Writing file: " << fulloutputfilename2DbacteriaNormalized << " ..." << std::endl;
-  write2D(image2DbacteriaNormalized, fulloutputfilename2DbacteriaNormalized);
+  rescaleNormalized->SetOutputMinimum(0);
+  rescaleNormalized->SetOutputMaximum(4095);
+  MedianFilterType::Pointer medianFilter = MedianFilterType::New();
+  MedianFilterType::InputSizeType radius; 
+  radius.Fill(1);
+  medianFilter->SetRadius(radius);
+  medianFilter->SetInput( rescaleNormalized->GetOutput() );
+  BinaryFilterType::Pointer binaryfilter = BinaryFilterType::New();
+  binaryfilter->SetInput( medianFilter->GetOutput() );
+  binaryfilter->SetOutsideValue(0);
+  binaryfilter->SetInsideValue(255);
+  binaryfilter->SetLowerThreshold(200);
+
+  binaryfilter->Update();
+
+  ImageType3D::ConstPointer binaryimage3Dbacteria = binaryfilter->GetOutput();
+  ImageType2D::Pointer binaryimage2Dbacteria = maxintprojection(binaryimage3Dbacteria);
+  std::string outputfilenamebinary2Dbacteria = seriesreader.getFilename(seriesnr, "_bacteria_binary");
+  std::string fulloutputfilenamebinary2Dbacteria = outputdirectory + outputfilenamebinary2Dbacteria; 
+  std::cout << "Writing file: " << fulloutputfilenamebinary2Dbacteria << " ..." << std::endl;
+  write2D(binaryimage2Dbacteria, fulloutputfilenamebinary2Dbacteria);
 
   QuickView viewer;
   viewer.AddImage(image2Dbacteria.GetPointer(), true, outputfilename2Dbacteria); 
-  viewer.AddImage(image2DbacteriaNormalized.GetPointer(), true, outputfilename2DbacteriaNormalized);  
+  viewer.AddImage(binaryimage2Dbacteria.GetPointer(), true, outputfilename2Dbacteria); 
   viewer.Visualize();
 
   return EXIT_SUCCESS;

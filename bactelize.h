@@ -37,7 +37,8 @@ typedef itk::Image< InputPixelType, 4 > ImageType4D;
 typedef itk::Image< InputPixelType, 3 > ImageType3D;
 typedef itk::Image< InputPixelType, 2 > ImageType2D;
 typedef itk::Image< double, 3 >   DoubleImageType3D;
-//typedef itk::Image< BinaryPixelType, 3 >   BinaryImageType;
+typedef itk::Image< BinaryPixelType, 3 >   BinaryImageType3D;
+typedef itk::Image< BinaryPixelType, 2 >   BinaryImageType2D;
 typedef itk::ImageFileReader< ImageType5D > ReaderType;
 typedef itk::StreamingImageFilter< ImageType5D, ImageType5D > StreamingFilter;
 typedef itk::ExtractImageFilter< ImageType5D, ImageType4D > ExtractFilterType5D4D;
@@ -50,15 +51,17 @@ typedef itk::ImageFileWriter< ImageTypeWriter > WriterType;
 typedef itk::RescaleIntensityImageFilter< ImageType2D, ImageTypeWriter >  RescaleFilterTypeWriter;
 typedef itk::RescaleIntensityImageFilter< DoubleImageType3D, ImageType3D >  RescaleFilterTypeNormalized;
 typedef itk::MedianImageFilter< ImageType3D, ImageType3D > MedianFilterType;
-typedef itk::BinaryThresholdImageFilter< ImageType3D, ImageType3D >  BinaryFilterType;
+typedef itk::BinaryThresholdImageFilter< ImageType3D, BinaryImageType3D >  BinaryFilterType;
 
 
-ImageType2D::Pointer maxintprojection(ImageType3D::ConstPointer, unsigned int projectionDirection = 2);
+ImageType2D::Pointer       maxintprojection(ImageType3D::ConstPointer, unsigned int projectionDirection = 2);
+BinaryImageType2D::Pointer maxintprojection(BinaryImageType3D::ConstPointer inputImageMIP, unsigned int projectionDirection = 2);
 void dumpmetadatadic(ImageType5D::Pointer image5D);
 void setspacing(ImageType5D::Pointer image5D, float x, float y, float z, float t, float c);
 ImageType3D::ConstPointer extractchannel(ImageType5D::Pointer image5D, int channelnr);
 void printHistogram(ImageType3D::ConstPointer);
 void write2D(ImageType2D::Pointer, std::string filenamepath);
+void write2D(BinaryImageType2D::Pointer image2Dbacteria, std::string filenamepath);
 
 
 class SeriesReader {   

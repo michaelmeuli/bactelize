@@ -2,8 +2,8 @@
 
 
 
-typedef itk::ImageLinearIteratorWithIndex< ImageType2D > LinearIteratorType;
-typedef itk::ImageSliceConstIteratorWithIndex< ImageType3D > SliceIteratorType;
+typedef itk::ImageLinearIteratorWithIndex< ImageType2D > LinearIteratorTypeInput;
+typedef itk::ImageSliceConstIteratorWithIndex< ImageType3D > SliceIteratorTypeInput;
 
 ImageType2D::Pointer maxintprojection(ImageType3D::ConstPointer inputImageMIP, unsigned int projectionDirection) {
   unsigned int i, j;
@@ -30,8 +30,74 @@ ImageType2D::Pointer maxintprojection(ImageType3D::ConstPointer inputImageMIP, u
   outputImageMIP->SetRegions( region2DMIP );
   outputImageMIP->Allocate();
  
-  SliceIteratorType  inputIt(  inputImageMIP, inputImageMIP->GetRequestedRegion() );
-  LinearIteratorType outputIt( outputImageMIP, outputImageMIP->GetRequestedRegion() );
+  SliceIteratorTypeInput  inputIt(  inputImageMIP, inputImageMIP->GetRequestedRegion() );
+  LinearIteratorTypeInput outputIt( outputImageMIP, outputImageMIP->GetRequestedRegion() );
+  inputIt.SetFirstDirection(  direction[1] );
+  inputIt.SetSecondDirection( direction[0] );
+  outputIt.SetDirection( 1 - direction[0] );
+  outputIt.GoToBegin();
+  while ( ! outputIt.IsAtEnd() )
+    {
+    while ( ! outputIt.IsAtEndOfLine() )
+      {
+      outputIt.Set( itk::NumericTraits<unsigned short>::NonpositiveMin() );
+      ++outputIt;
+      }
+    outputIt.NextLine();
+    }
+
+  inputIt.GoToBegin();
+  outputIt.GoToBegin();
+  while( !inputIt.IsAtEnd() )
+    {
+    while ( !inputIt.IsAtEndOfSlice() )
+      {
+      while ( !inputIt.IsAtEndOfLine() )
+        {
+        outputIt.Set( vnl_math_max( outputIt.Get(), inputIt.Get() ));
+        ++inputIt;
+        ++outputIt;
+        }
+      outputIt.NextLine();
+      inputIt.NextLine();
+      }
+    outputIt.GoToBegin();
+    inputIt.NextSlice();
+    }
+  return outputImageMIP;
+  }
+
+
+typedef itk::ImageLinearIteratorWithIndex< BinaryImageType2D > LinearIteratorTypeBinary;
+typedef itk::ImageSliceConstIteratorWithIndex< BinaryImageType3D > SliceIteratorTypeBinary;
+
+BinaryImageType2D::Pointer maxintprojection(BinaryImageType3D::ConstPointer inputImageMIP, unsigned int projectionDirection) {
+  unsigned int i, j;
+  unsigned int direction[2];
+  for (i = 0, j = 0; i < 3; ++i )
+    {
+    if (i != projectionDirection)
+      {
+      direction[j] = i;
+      j++;
+      }
+    }
+  BinaryImageType2D::RegionType region2DMIP;
+  BinaryImageType2D::RegionType::SizeType size2DMIP;
+  BinaryImageType2D::RegionType::IndexType index2DMIP;
+  BinaryImageType3D::RegionType requestedRegion = inputImageMIP -> GetRequestedRegion();
+  index2DMIP[ direction[0] ]    = requestedRegion.GetIndex()[ direction[0] ];
+  index2DMIP[ 1- direction[0] ] = requestedRegion.GetIndex()[ direction[1] ];
+  size2DMIP[ direction[0] ]     = requestedRegion.GetSize()[  direction[0] ];
+  size2DMIP[ 1- direction[0] ]  = requestedRegion.GetSize()[  direction[1] ];
+  region2DMIP.SetSize( size2DMIP );
+  region2DMIP.SetIndex( index2DMIP );
+  BinaryImageType2D::Pointer outputImageMIP = BinaryImageType2D::New();
+  outputImageMIP->SetRegions( region2DMIP );
+  outputImageMIP->Allocate();
+ 
+  SliceIteratorTypeBinary  inputIt(  inputImageMIP, inputImageMIP->GetRequestedRegion() );
+  LinearIteratorTypeBinary outputIt( outputImageMIP, outputImageMIP->GetRequestedRegion() );
   inputIt.SetFirstDirection(  direction[1] );
   inputIt.SetSecondDirection( direction[0] );
   outputIt.SetDirection( 1 - direction[0] );
@@ -205,6 +271,14 @@ void write2D(ImageType2D::Pointer image2Dbacteria, std::string filenamepath) {
   WriterType::Pointer writer = WriterType::New();
   writer->SetFileName( filenamepath );             
   writer->SetInput(rescaleFilter->GetOutput());
+  writer->Update();
+  }
+
+
+void write2D(BinaryImageType2D::Pointer image2Dbacteria, std::string filenamepath) {
+  WriterType::Pointer writer = WriterType::New();
+  writer->SetFileName( filenamepath );             
+  writer->SetInput(image2Dbacteria);
   writer->Update();
   }
 

@@ -79,8 +79,8 @@ int main( int argc, char * argv [] )
 
   binaryfilter->Update();
 
-  ImageType3D::ConstPointer binaryimage3Dbacteria = binaryfilter->GetOutput();
-  ImageType2D::Pointer binaryimage2Dbacteria = maxintprojection(binaryimage3Dbacteria);
+  BinaryImageType3D::ConstPointer binaryimage3Dbacteria = binaryfilter->GetOutput();
+  BinaryImageType2D::Pointer binaryimage2Dbacteria = maxintprojection(binaryimage3Dbacteria);
   std::string outputfilenamebinary2Dbacteria = seriesreader.getFilename(seriesnr, "_bacteria_binary");
   std::string fulloutputfilenamebinary2Dbacteria = outputdirectory + outputfilenamebinary2Dbacteria; 
   std::cout << "Writing file: " << fulloutputfilenamebinary2Dbacteria << " ..." << std::endl;

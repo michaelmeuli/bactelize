@@ -21,6 +21,8 @@
 #include "itkNormalizeImageFilter.h"
 #include "itkMedianImageFilter.h"
 #include "itkBinaryThresholdImageFilter.h"
+#include "itkImageRegionIterator.h"
+#include "itkBinaryImageToShapeLabelMapFilter.h"
 
 #include <fstream>
 #include <sstream>
@@ -52,6 +54,7 @@ typedef itk::RescaleIntensityImageFilter< ImageType2D, ImageTypeWriter >  Rescal
 typedef itk::RescaleIntensityImageFilter< DoubleImageType3D, ImageType3D >  RescaleFilterTypeNormalized;
 typedef itk::MedianImageFilter< ImageType3D, ImageType3D > MedianFilterType;
 typedef itk::BinaryThresholdImageFilter< ImageType3D, BinaryImageType3D >  BinaryFilterType;
+typedef itk::BinaryImageToShapeLabelMapFilter<BinaryImageType3D> BinaryImageToShapeLabelMapFilterType;
 
 
 ImageType2D::Pointer       maxintprojection(ImageType3D::ConstPointer, unsigned int projectionDirection = 2);

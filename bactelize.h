@@ -57,14 +57,16 @@ typedef itk::BinaryThresholdImageFilter< ImageType3D, BinaryImageType3D >  Binar
 typedef itk::BinaryImageToShapeLabelMapFilter<BinaryImageType3D> BinaryImageToShapeLabelMapFilterType;
 
 
-ImageType2D::Pointer       maxintprojection(ImageType3D::ConstPointer, unsigned int projectionDirection = 2);
-BinaryImageType2D::Pointer maxintprojection(BinaryImageType3D::ConstPointer inputImageMIP, unsigned int projectionDirection = 2);
-void dumpmetadatadic(ImageType5D::Pointer image5D);
-void setspacing(ImageType5D::Pointer image5D, float x, float y, float z, float t, float c);
-ImageType3D::ConstPointer extractchannel(ImageType5D::Pointer image5D, int channelnr);
-void printHistogram(ImageType3D::ConstPointer);
+ImageType2D::Pointer       maxintprojection(ImageType3D::Pointer, unsigned int projectionDirection = 2);
+BinaryImageType2D::Pointer maxintprojection(BinaryImageType3D::Pointer, unsigned int projectionDirection = 2);
+void dumpmetadatadic(ImageType5D::Pointer);
+void setSpacing(ImageType5D::Pointer, float x, float y, float z, float t, float c);  //obsolete
+void setSpacing(BinaryImageType3D::Pointer image3D, float x, float y, float z);
+void printSpacing(BinaryImageType3D::Pointer);
+ImageType3D::Pointer extractchannel(ImageType5D::Pointer, int channelnr);
+void printHistogram(ImageType3D::Pointer);
 void write2D(ImageType2D::Pointer, std::string filenamepath);
-void write2D(BinaryImageType2D::Pointer image2Dbacteria, std::string filenamepath);
+void write2D(BinaryImageType2D::Pointer, std::string filenamepath);
 
 
 class SeriesReader {   

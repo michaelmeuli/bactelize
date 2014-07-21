@@ -25,7 +25,9 @@
 #include "itkBinaryImageToLabelMapFilter.h"
 #include "itkLabelMapToLabelImageFilter.h"
 #include "itkLabelImageToShapeLabelMapFilter.h"
-#include "itkLabelStatisticsImageFilter.h"
+#include "itkLabelMapToAttributeImageFilter.h"
+#include "itkStatisticsLabelObjectAccessors.h"
+#include "itkLabelImageToStatisticsLabelMapFilter.h"
 
 
 #include <fstream>

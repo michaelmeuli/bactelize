@@ -116,17 +116,18 @@ int main( int argc, char * argv [] )
   std::cout << "There are " << binaryImageToLabelMapFilter->GetOutput()->GetNumberOfLabelObjects() 
             << " objects remaining in label map." << std::endl << std::endl;
   binaryImageToLabelMapFilter->Update();
+  labelMapToLabelImageFilter->Update();
 
   typedef itk::LabelImageToStatisticsLabelMapFilter< BinaryImageType3D, ImageType3D > LabelImageToStatisticsLabelMapFilterType;
   LabelImageToStatisticsLabelMapFilterType::Pointer labelImageToStatisticsLabelMapFilter = LabelImageToStatisticsLabelMapFilterType::New();
   labelImageToStatisticsLabelMapFilter->SetFeatureImage(image3Dred);
-  labelMapToLabelImageFilter->Update();
   labelImageToStatisticsLabelMapFilter->SetInput(labelMapToLabelImageFilter->GetOutput());
   labelImageToStatisticsLabelMapFilter->Update();
 
-  unsigned int bacteriacount = binaryImageToLabelMapFilter->GetOutput()->GetNumberOfLabelObjects();
+// assert binaryImageToLabelMapFilter->GetOutput()->GetNumberOfLabelObjects() == labelImageToStatisticsLabelMapFilter->GetOutput()->GetNumberOfLabelObjects() 
+  unsigned int bacteriacount = labelImageToStatisticsLabelMapFilter->GetOutput()->GetNumberOfLabelObjects();
   unsigned int colcount = 0; 
-  for(unsigned int i = 0; i < binaryImageToLabelMapFilter->GetOutput()->GetNumberOfLabelObjects(); i++) {
+  for(unsigned int i = 0; i < labelImageToStatisticsLabelMapFilter->GetOutput()->GetNumberOfLabelObjects(); i++) {
     LabelImageToStatisticsLabelMapFilterType::OutputImageType::LabelObjectType* labelObject = labelImageToStatisticsLabelMapFilter->GetOutput()->GetNthLabelObject(i);
     labelObject->Print(std::cout, 4);
     double mean = labelObject->GetMean();
@@ -136,16 +137,17 @@ int main( int argc, char * argv [] )
       }
     std::cout << std::endl;    
     }
-  std::cout << "Total bacteria counted: " << bacteriacount << std::endl;
+  std::cout << "Total bacteria counted (in statistics label map): " << bacteriacount << std::endl;
   std::cout << "Bacteria colocalizing in lysosomechannel: " << colcount << std::endl;
 
 
-/*
-  typedef itk::LabelMapToAttributeImageFilter< LabelStatisticsImageFilterType::OutputImageType, ImageType3D,
-     itk::Functor::MeanLabelObjectAccessor<LabelStatisticsImageFilterType::OutputImageType::LabelObjectType> > L2ImageType;
-  L2ImageType::Pointer l2i = L2ImageType::New();
-  l2i->SetInput( labelStatisticsImageFilter->GetOutput() );
-*/
+  typedef itk::LabelMapToAttributeImageFilter< LabelImageToStatisticsLabelMapFilterType::OutputImageType, ImageType3D,
+     itk::Functor::MeanLabelObjectAccessor<LabelImageToStatisticsLabelMapFilterType::OutputImageType::LabelObjectType> > L2ImageType;
+  L2ImageType::Pointer labelMapToReadMeanImage = L2ImageType::New();
+  labelMapToReadMeanImage->SetInput( labelImageToStatisticsLabelMapFilter->GetOutput() );
+  labelMapToReadMeanImage->Update();
+  ImageType3D::Pointer image3DbacteriaReadMean = labelMapToReadMeanImage->GetOutput();
+
 
 
 

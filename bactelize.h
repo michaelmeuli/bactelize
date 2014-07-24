@@ -28,6 +28,7 @@
 #include "itkLabelMapToAttributeImageFilter.h"
 #include "itkStatisticsLabelObjectAccessors.h"
 #include "itkLabelImageToStatisticsLabelMapFilter.h"
+#include "itkComposeImageFilter.h"
 
 
 #include <fstream>

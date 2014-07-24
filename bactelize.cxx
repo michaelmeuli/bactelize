@@ -412,7 +412,6 @@ std::string SeriesReader::getFilename(int seriesnr, std::string suffix) {
     }
   ssout << seriesnr;
   ssout << suffix;
-  ssout << ".tiff";
   filename.append(ssout.str());
   return filename;
   }

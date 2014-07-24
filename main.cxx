@@ -50,6 +50,7 @@ int main( int argc, char * argv [] )
   dumpmetadatadic(image5D);
 //  setSpacing(image5D, xspacing, yspacing, zspacing, tspacing, cspacing);
 
+  ImageType3D::Pointer image3Dnuclei = extractchannel(image5D, nucleichannel);
   ImageType3D::Pointer image3Dbacteria = extractchannel(image5D, bacteriachannel);
   ImageType3D::Pointer image3Dred = extractchannel(image5D, lysosomechannel);
   
@@ -147,24 +148,50 @@ int main( int argc, char * argv [] )
   labelMapToReadMeanImage->SetInput( labelImageToStatisticsLabelMapFilter->GetOutput() );
   labelMapToReadMeanImage->Update();
   ImageType3D::Pointer image3DbacteriaReadMean = labelMapToReadMeanImage->GetOutput();
+  
+  typedef itk::ImageFileWriter< ImageType3D > WriterType3D;
+  WriterType3D::Pointer writer3D = WriterType3D::New();
+  std::string outputfilename3DreadMean = seriesreader.getFilename(seriesnr, "_readMean.vtk");
+  std::string fulloutputfilename3DreadMean = outputdirectory + outputfilename3DreadMean; 
+  writer3D->SetFileName( fulloutputfilename3DreadMean );             
+  writer3D->SetInput(image3DbacteriaReadMean);
+  std::cout << "Writing file: " << fulloutputfilename3DreadMean << " ..." << std::endl;
+  writer3D->Update();
 
+  typedef itk::VectorImage< InputPixelType, 3 > VectorImageType3D;
+  typedef itk::ComposeImageFilter< ImageType3D, VectorImageType3D > ComposeImageFilterType;
+  ComposeImageFilterType::Pointer composeImageFilter = ComposeImageFilterType::New();
+  composeImageFilter->SetInput( 0, image3Dnuclei );
+  composeImageFilter->SetInput( 1, image3Dbacteria );
+  composeImageFilter->SetInput( 2, image3Dred );
+  composeImageFilter->SetInput( 3, image3DbacteriaReadMean );
+  composeImageFilter->Update();
+  VectorImageType3D::Pointer vectorImage = composeImageFilter->GetOutput();
 
-
+  typedef itk::ImageFileWriter< VectorImageType3D > WriterTypeVector;
+  WriterTypeVector::Pointer writerVector = WriterTypeVector::New();
+  std::string outputfilename3Dvector = seriesreader.getFilename(seriesnr, "_vector.vtk");
+  std::string fulloutputfilename3Dvector = outputdirectory + outputfilename3Dvector; 
+  writerVector->SetFileName( fulloutputfilename3Dvector );             
+  writerVector->SetInput(vectorImage);
+  std::cout << "Writing file: " << fulloutputfilename3Dvector << " ..." << std::endl;
+  writerVector->Update();
+  
 
   ImageType2D::Pointer image2Dbacteria = maxintprojection(image3Dbacteria);
-  std::string outputfilename2Dbacteria = seriesreader.getFilename(seriesnr, "_bacteria");
+  std::string outputfilename2Dbacteria = seriesreader.getFilename(seriesnr, "_bacteria.tiff");
   std::string fulloutputfilename2Dbacteria = outputdirectory + outputfilename2Dbacteria; 
   std::cout << "Writing file: " << fulloutputfilename2Dbacteria << " ..." << std::endl;
   write2D(image2Dbacteria, fulloutputfilename2Dbacteria);
   
   ImageType2D::Pointer image2Dred = maxintprojection(image3Dred);
-  std::string outputfilename2Dred = seriesreader.getFilename(seriesnr, "_lysosome");
+  std::string outputfilename2Dred = seriesreader.getFilename(seriesnr, "_lysosome.tiff");
   std::string fulloutputfilename2Dred = outputdirectory + outputfilename2Dred; 
   std::cout << "Writing file: " << fulloutputfilename2Dred << " ..." << std::endl;
   write2D(image2Dred, fulloutputfilename2Dred);
   
   BinaryImageType2D::Pointer binaryimage2Dbacteria = maxintprojection(binaryimage3Dbacteria);
-  std::string outputfilenamebinary2Dbacteria = seriesreader.getFilename(seriesnr, "_bacteria_binary");
+  std::string outputfilenamebinary2Dbacteria = seriesreader.getFilename(seriesnr, "_bacteria_binary.tiff");
   std::string fulloutputfilenamebinary2Dbacteria = outputdirectory + outputfilenamebinary2Dbacteria; 
   std::cout << "Writing file: " << fulloutputfilenamebinary2Dbacteria << " ..." << std::endl;
   write2D(binaryimage2Dbacteria, fulloutputfilenamebinary2Dbacteria);

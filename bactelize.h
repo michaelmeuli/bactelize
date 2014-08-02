@@ -28,8 +28,8 @@
 #include "itkLabelMapToAttributeImageFilter.h"
 #include "itkStatisticsLabelObjectAccessors.h"
 #include "itkLabelImageToStatisticsLabelMapFilter.h"
-#include "itkComposeImageFilter.h"
-#include "itkSCIFIOImageIO.h"
+
+#include "itkScalarToRGBColormapImageFilter.h"
 
 
 #include <fstream>

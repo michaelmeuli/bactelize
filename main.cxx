@@ -149,61 +149,12 @@ int main( int argc, char * argv [] )
   labelMapToReadMeanImage->Update();
   ImageType3D::Pointer image3DbacteriaReadMean = labelMapToReadMeanImage->GetOutput();
   
-  typedef itk::ImageFileWriter< ImageType3D > WriterType3D;
-  WriterType3D::Pointer writer3D = WriterType3D::New();
-  std::string outputfilename3DreadMean = seriesreader.getFilename(seriesnr, "_readMean.vtk");
-  std::string fulloutputfilename3DreadMean = outputdirectory + outputfilename3DreadMean; 
-  writer3D->SetFileName( fulloutputfilename3DreadMean );             
-  writer3D->SetInput(image3DbacteriaReadMean);
-  std::cout << "Writing file: " << fulloutputfilename3DreadMean << " ..." << std::endl;
-  writer3D->Update();
 
-  typedef itk::VectorImage< InputPixelType, 3 > VectorImageType3D;
-  typedef itk::ComposeImageFilter< ImageType3D, VectorImageType3D > ComposeImageFilterType;
-  ComposeImageFilterType::Pointer composeImageFilter = ComposeImageFilterType::New();
-  composeImageFilter->SetInput( 0, image3Dnuclei );
-  composeImageFilter->SetInput( 1, image3Dbacteria );
-  composeImageFilter->SetInput( 2, image3Dred );
-  composeImageFilter->SetInput( 3, image3DbacteriaReadMean );
-  composeImageFilter->Update();
-  VectorImageType3D::Pointer vectorImage = composeImageFilter->GetOutput();
-
-  typedef itk::ImageFileWriter< VectorImageType3D > WriterTypeVector;
-  WriterTypeVector::Pointer writerVector = WriterTypeVector::New();
-  std::string outputfilename3Dvector = seriesreader.getFilename(seriesnr, "_vector.vtk");
-  std::string fulloutputfilename3Dvector = outputdirectory + outputfilename3Dvector; 
-  writerVector->SetFileName(fulloutputfilename3Dvector);             
-  writerVector->SetInput(vectorImage);
-  std::cout << "Writing file: " << fulloutputfilename3Dvector << " ..." << std::endl;
-  writerVector->Update();
-
-
-  typedef itk::ImageFileWriter< ImageType3D > WriterTypeSCIFIO;
-  typename WriterTypeSCIFIO::Pointer writerSCIFIO = WriterTypeSCIFIO::New();
-  std::string outputfilename3DSCIFIO = seriesreader.getFilename(seriesnr, "_readMean.ome.tiff");
-  std::string fulloutputfilename3DSCIFIO = outputdirectory + outputfilename3DSCIFIO; 
-  writerSCIFIO->SetFileName(fulloutputfilename3DSCIFIO);
-  writerSCIFIO->SetInput(image3DbacteriaReadMean);
-  itk::SCIFIOImageIO::Pointer ioOut = itk::SCIFIOImageIO::New();
-  ioOut->DebugOn();
-  writerSCIFIO->SetImageIO(ioOut);
-  std::cout << "Writing file: " << fulloutputfilename3DSCIFIO << " ..." << std::endl;
-  writerSCIFIO->Update();
-  
-
-  typedef itk::ImageFileWriter< VectorImageType3D > WriterTypeVectorSCIFIO;
-  typename WriterTypeVectorSCIFIO::Pointer writerVectorSCIFIO = WriterTypeVectorSCIFIO::New();
-  std::string outputfilename3DvectorSCIFIO = seriesreader.getFilename(seriesnr, "_vector.ome.tiff");
-  std::string fulloutputfilename3DvectorSCIFIO = outputdirectory + outputfilename3DvectorSCIFIO; 
-  writerVectorSCIFIO->SetFileName(fulloutputfilename3DvectorSCIFIO);
-  writerVectorSCIFIO->SetInput(vectorImage);
-  itk::SCIFIOImageIO::Pointer ioOutV = itk::SCIFIOImageIO::New();
-  ioOutV->DebugOn();
-  writerVectorSCIFIO->SetImageIO(ioOutV);
-  std::cout << "Writing file: " << fulloutputfilename3DvectorSCIFIO << " ..." << std::endl;
-  writerVectorSCIFIO->Update();
-
-
+  ImageType2D::Pointer image2Dnuclei = maxintprojection(image3Dnuclei);
+  std::string outputfilename2Dnuclei = seriesreader.getFilename(seriesnr, "_nuclei.tiff");
+  std::string fulloutputfilename2Dnuclei = outputdirectory + outputfilename2Dnuclei; 
+  std::cout << "Writing file: " << fulloutputfilename2Dnuclei << " ..." << std::endl;
+  write2D(image2Dnuclei, fulloutputfilename2Dnuclei);
 
   ImageType2D::Pointer image2Dbacteria = maxintprojection(image3Dbacteria);
   std::string outputfilename2Dbacteria = seriesreader.getFilename(seriesnr, "_bacteria.tiff");
@@ -216,20 +167,27 @@ int main( int argc, char * argv [] )
   std::string fulloutputfilename2Dred = outputdirectory + outputfilename2Dred; 
   std::cout << "Writing file: " << fulloutputfilename2Dred << " ..." << std::endl;
   write2D(image2Dred, fulloutputfilename2Dred);
-  
-  BinaryImageType2D::Pointer binaryimage2Dbacteria = maxintprojection(binaryimage3Dbacteria);
-  std::string outputfilenamebinary2Dbacteria = seriesreader.getFilename(seriesnr, "_bacteria_binary.tiff");
-  std::string fulloutputfilenamebinary2Dbacteria = outputdirectory + outputfilenamebinary2Dbacteria; 
-  std::cout << "Writing file: " << fulloutputfilenamebinary2Dbacteria << " ..." << std::endl;
-  write2D(binaryimage2Dbacteria, fulloutputfilenamebinary2Dbacteria);
 
-  QuickView viewer;
-  viewer.AddImage(image2Dbacteria.GetPointer(), true, outputfilename2Dbacteria);
-  viewer.AddImage(image2Dred.GetPointer(), true, outputfilename2Dred);
-  viewer.AddImage(binaryimage2Dbacteria.GetPointer(), true, outputfilenamebinary2Dbacteria); 
-  viewer.Visualize();
-
+  ImageType2D::Pointer image2DReadMean = maxintprojection(image3DbacteriaReadMean);
+  typedef itk::RGBPixel<unsigned char>   RGBPixelType;
+  typedef itk::Image<RGBPixelType, 2>    RGBImageType;
+  typedef itk::ScalarToRGBColormapImageFilter<ImageType2D, RGBImageType> RGBFilterType;
+  RGBFilterType::Pointer colormapImageFilter = RGBFilterType::New();
+  colormapImageFilter->SetInput(image2DReadMean);
+  colormapImageFilter->SetColormap( RGBFilterType::Jet );
+  colormapImageFilter->Update();
+  typedef itk::ImageFileWriter<RGBImageType> WriterTypeRGB;
+  std::string outputfilename2DReadMean = seriesreader.getFilename(seriesnr, "_ReadMean.tiff");
+  std::string fulloutputfilename2DReadMean = outputdirectory + outputfilename2DReadMean; 
+  WriterTypeRGB::Pointer writerRGB = WriterTypeRGB::New();
+  writerRGB->SetFileName( fulloutputfilename2DReadMean );             
+  writerRGB->SetInput(colormapImageFilter->GetOutput());
+  std::cout << "Writing file: " << fulloutputfilename2DReadMean << " ..." << std::endl;
+  writerRGB->Update();
 
 
   return EXIT_SUCCESS;
 }
+
+
+

@@ -28,8 +28,8 @@
 #include "itkLabelMapToAttributeImageFilter.h"
 #include "itkStatisticsLabelObjectAccessors.h"
 #include "itkLabelImageToStatisticsLabelMapFilter.h"
-
 #include "itkScalarToRGBColormapImageFilter.h"
+#include "itkLabelMapToBinaryImageFilter.h"
 
 
 #include <fstream>
@@ -62,6 +62,7 @@ typedef itk::RescaleIntensityImageFilter< ImageType2D, ImageTypeWriter >  Rescal
 typedef itk::RescaleIntensityImageFilter< DoubleImageType3D, ImageType3D >  RescaleFilterTypeNormalized;
 typedef itk::MedianImageFilter< ImageType3D, ImageType3D > MedianFilterType;
 typedef itk::BinaryThresholdImageFilter< ImageType3D, BinaryImageType3D >  BinaryFilterType;
+
 
 
 ImageType2D::Pointer       maxintprojection(ImageType3D::Pointer, unsigned int projectionDirection = 2);

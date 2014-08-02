@@ -151,22 +151,32 @@ int main( int argc, char * argv [] )
   
 
   ImageType2D::Pointer image2Dnuclei = maxintprojection(image3Dnuclei);
-  std::string outputfilename2Dnuclei = seriesreader.getFilename(seriesnr, "_nuclei.tiff");
+  std::string outputfilename2Dnuclei = seriesreader.getFilename(seriesnr, "_a_nuclei.tiff");
   std::string fulloutputfilename2Dnuclei = outputdirectory + outputfilename2Dnuclei; 
   std::cout << "Writing file: " << fulloutputfilename2Dnuclei << " ..." << std::endl;
   write2D(image2Dnuclei, fulloutputfilename2Dnuclei);
 
   ImageType2D::Pointer image2Dbacteria = maxintprojection(image3Dbacteria);
-  std::string outputfilename2Dbacteria = seriesreader.getFilename(seriesnr, "_bacteria.tiff");
+  std::string outputfilename2Dbacteria = seriesreader.getFilename(seriesnr, "_b_bacteria.tiff");
   std::string fulloutputfilename2Dbacteria = outputdirectory + outputfilename2Dbacteria; 
   std::cout << "Writing file: " << fulloutputfilename2Dbacteria << " ..." << std::endl;
   write2D(image2Dbacteria, fulloutputfilename2Dbacteria);
   
   ImageType2D::Pointer image2Dred = maxintprojection(image3Dred);
-  std::string outputfilename2Dred = seriesreader.getFilename(seriesnr, "_lysosome.tiff");
+  std::string outputfilename2Dred = seriesreader.getFilename(seriesnr, "_c_lysosome.tiff");
   std::string fulloutputfilename2Dred = outputdirectory + outputfilename2Dred; 
   std::cout << "Writing file: " << fulloutputfilename2Dred << " ..." << std::endl;
   write2D(image2Dred, fulloutputfilename2Dred);
+
+  typedef itk::LabelMapToBinaryImageFilter<BinaryImageToLabelMapFilterType::OutputImageType, BinaryImageType3D> LabelMapToBinaryImageFilterType;
+  LabelMapToBinaryImageFilterType::Pointer labelMapToBinaryImageFilter = LabelMapToBinaryImageFilterType::New();
+  labelMapToBinaryImageFilter->SetInput(binaryImageToLabelMapFilter->GetOutput());
+  labelMapToBinaryImageFilter->Update();
+  BinaryImageType2D::Pointer binaryimage2Dbacteria = maxintprojection(labelMapToBinaryImageFilter->GetOutput());
+  std::string outputfilenamebinary2Dbacteria = seriesreader.getFilename(seriesnr, "_d_bacteria_binary.tiff");
+  std::string fulloutputfilenamebinary2Dbacteria = outputdirectory + outputfilenamebinary2Dbacteria; 
+  std::cout << "Writing file: " << fulloutputfilenamebinary2Dbacteria << " ..." << std::endl;
+  write2D(binaryimage2Dbacteria, fulloutputfilenamebinary2Dbacteria);
 
   ImageType2D::Pointer image2DReadMean = maxintprojection(image3DbacteriaReadMean);
   typedef itk::RGBPixel<unsigned char>   RGBPixelType;
@@ -177,7 +187,7 @@ int main( int argc, char * argv [] )
   colormapImageFilter->SetColormap( RGBFilterType::Jet );
   colormapImageFilter->Update();
   typedef itk::ImageFileWriter<RGBImageType> WriterTypeRGB;
-  std::string outputfilename2DReadMean = seriesreader.getFilename(seriesnr, "_ReadMean.tiff");
+  std::string outputfilename2DReadMean = seriesreader.getFilename(seriesnr, "_e_ReadMean.tiff");
   std::string fulloutputfilename2DReadMean = outputdirectory + outputfilename2DReadMean; 
   WriterTypeRGB::Pointer writerRGB = WriterTypeRGB::New();
   writerRGB->SetFileName( fulloutputfilename2DReadMean );             

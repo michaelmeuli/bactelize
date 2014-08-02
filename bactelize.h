@@ -12,7 +12,6 @@
 #include "itkSCIFIOImageIO.h"
 #include "itkExtractImageFilter.h"
 #include "itksys/SystemTools.hxx"
-#include "QuickView.h"
 #include "vnl/vnl_math.h"
 #include "itkImageSliceConstIteratorWithIndex.h"
 #include "itkImageLinearIteratorWithIndex.h"

@@ -172,11 +172,38 @@ int main( int argc, char * argv [] )
   WriterTypeVector::Pointer writerVector = WriterTypeVector::New();
   std::string outputfilename3Dvector = seriesreader.getFilename(seriesnr, "_vector.vtk");
   std::string fulloutputfilename3Dvector = outputdirectory + outputfilename3Dvector; 
-  writerVector->SetFileName( fulloutputfilename3Dvector );             
+  writerVector->SetFileName(fulloutputfilename3Dvector);             
   writerVector->SetInput(vectorImage);
   std::cout << "Writing file: " << fulloutputfilename3Dvector << " ..." << std::endl;
   writerVector->Update();
+
+
+  typedef itk::ImageFileWriter< ImageType3D > WriterTypeSCIFIO;
+  typename WriterTypeSCIFIO::Pointer writerSCIFIO = WriterTypeSCIFIO::New();
+  std::string outputfilename3DSCIFIO = seriesreader.getFilename(seriesnr, "_readMean.ome.tiff");
+  std::string fulloutputfilename3DSCIFIO = outputdirectory + outputfilename3DSCIFIO; 
+  writerSCIFIO->SetFileName(fulloutputfilename3DSCIFIO);
+  writerSCIFIO->SetInput(image3DbacteriaReadMean);
+  itk::SCIFIOImageIO::Pointer ioOut = itk::SCIFIOImageIO::New();
+  ioOut->DebugOn();
+  writerSCIFIO->SetImageIO(ioOut);
+  std::cout << "Writing file: " << fulloutputfilename3DSCIFIO << " ..." << std::endl;
+  writerSCIFIO->Update();
   
+
+  typedef itk::ImageFileWriter< VectorImageType3D > WriterTypeVectorSCIFIO;
+  typename WriterTypeVectorSCIFIO::Pointer writerVectorSCIFIO = WriterTypeVectorSCIFIO::New();
+  std::string outputfilename3DvectorSCIFIO = seriesreader.getFilename(seriesnr, "_vector.ome.tiff");
+  std::string fulloutputfilename3DvectorSCIFIO = outputdirectory + outputfilename3DvectorSCIFIO; 
+  writerVectorSCIFIO->SetFileName(fulloutputfilename3DvectorSCIFIO);
+  writerVectorSCIFIO->SetInput(vectorImage);
+  itk::SCIFIOImageIO::Pointer ioOutV = itk::SCIFIOImageIO::New();
+  ioOutV->DebugOn();
+  writerVectorSCIFIO->SetImageIO(ioOutV);
+  std::cout << "Writing file: " << fulloutputfilename3DvectorSCIFIO << " ..." << std::endl;
+  writerVectorSCIFIO->Update();
+
+
 
   ImageType2D::Pointer image2Dbacteria = maxintprojection(image3Dbacteria);
   std::string outputfilename2Dbacteria = seriesreader.getFilename(seriesnr, "_bacteria.tiff");

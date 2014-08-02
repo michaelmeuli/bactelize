@@ -29,6 +29,7 @@
 #include "itkStatisticsLabelObjectAccessors.h"
 #include "itkLabelImageToStatisticsLabelMapFilter.h"
 #include "itkComposeImageFilter.h"
+#include "itkSCIFIOImageIO.h"
 
 
 #include <fstream>

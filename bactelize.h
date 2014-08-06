@@ -30,13 +30,16 @@
 #include "itkScalarToRGBColormapImageFilter.h"
 #include "itkLabelMapToBinaryImageFilter.h"
 
-
 #include <fstream>
 #include <sstream>
 #include <string>
 #include <vector>
 #include <iostream>
 #include <iomanip>
+// uncomment to disable assert()
+// #define NDEBUG
+#include <cassert>
+#include <fstream>
 
 
 typedef unsigned short InputPixelType;
@@ -61,7 +64,17 @@ typedef itk::RescaleIntensityImageFilter< ImageType2D, ImageTypeWriter >  Rescal
 typedef itk::RescaleIntensityImageFilter< DoubleImageType3D, ImageType3D >  RescaleFilterTypeNormalized;
 typedef itk::MedianImageFilter< ImageType3D, ImageType3D > MedianFilterType;
 typedef itk::BinaryThresholdImageFilter< ImageType3D, BinaryImageType3D >  BinaryFilterType;
-
+typedef itk::BinaryImageToLabelMapFilter<BinaryImageType3D> BinaryImageToLabelMapFilterType;
+typedef itk::LabelMapToLabelImageFilter<BinaryImageToLabelMapFilterType::OutputImageType, BinaryImageType3D> LabelMapToLabelImageFilterType;
+typedef itk::LabelImageToShapeLabelMapFilter <BinaryImageType3D> LabelImageToShapeLabelMapFilterType;
+typedef itk::LabelImageToStatisticsLabelMapFilter< BinaryImageType3D, ImageType3D > LabelImageToStatisticsLabelMapFilterType;
+typedef itk::LabelMapToAttributeImageFilter< LabelImageToStatisticsLabelMapFilterType::OutputImageType, ImageType3D,
+   itk::Functor::MeanLabelObjectAccessor<LabelImageToStatisticsLabelMapFilterType::OutputImageType::LabelObjectType> > L2ImageType;
+typedef itk::LabelMapToBinaryImageFilter<BinaryImageToLabelMapFilterType::OutputImageType, BinaryImageType3D> LabelMapToBinaryImageFilterType;
+typedef itk::RGBPixel<unsigned char>   RGBPixelType;
+typedef itk::Image<RGBPixelType, 2>    RGBImageType;
+typedef itk::ScalarToRGBColormapImageFilter<ImageType2D, RGBImageType> RGBFilterType;
+typedef itk::ImageFileWriter<RGBImageType> WriterTypeRGB;
 
 
 ImageType2D::Pointer       maxintprojection(ImageType3D::Pointer, unsigned int projectionDirection = 2);

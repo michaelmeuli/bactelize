@@ -204,24 +204,20 @@ void printSpacing(BinaryImageType3D::Pointer image3D) {
   int regionDimIm = region3D.GetImageDimension();
   const ImageType3D::SpacingType& sp = image3D->GetSpacing();
   const ImageType3D::PointType& orgn = image3D->GetOrigin();
-  for(int i = 0; i < regionDimIm; i++)
-    {
-    std::cout << "\tDimension " << i + 1 << " Size: "
+  for(int i = 0; i < regionDimIm; i++) {
+    std::cout << "Dimension " << i + 1 << " Size: "
               << region3D.GetSize(i) << std::endl;
     }
-  for(int i = 0; i < regionDimIm; i++)
-  {
+  for(int i = 0; i < regionDimIm; i++) {
     if ( region3D.GetSize(i) > 1 ) {
-      std::cout << "\tSpacing " << i + 1 << ": "
+      std::cout << "Spacing " << i + 1 << ": "
                 << sp[i] << std::endl;
+      }
     }
-  }
-  for(int i = 0; i < regionDimIm; i++)
-    {
-    std::cout << "\tOrigin " << i + 1 << ": "
+  for(int i = 0; i < regionDimIm; i++) {
+    std::cout << "Origin " << i + 1 << ": "
               << orgn[i] << std::endl;
     }
-  std::cout << std::endl;
   }
 
 
@@ -232,17 +228,9 @@ ImageType3D::Pointer extractchannel(ImageType5D::Pointer image5D, int channelnr)
   extractfilter5D4Dch2->SetDirectionCollapseToSubmatrix();
   ImageType5D::RegionType region5D = image5D->GetLargestPossibleRegion();
   ImageType5D::SizeType size5Dch = region5D.GetSize();
-  std::cout << "Extract 5D to 4D channell " << channelnr << ": size5Dch= "
-    << size5Dch[0] << ", " << size5Dch[1] << ", " << size5Dch[2] << ", " << size5Dch[3] << ", " << size5Dch[4] << std::endl;  
-  size5Dch[4] = 0;
-  std::cout << "Extract 5D to 4D channell " << channelnr << ": size5Dch= " 
-	<< size5Dch[0] << ", " << size5Dch[1] << ", " << size5Dch[2] << ", " << size5Dch[3] << ", " << size5Dch[4] << std::endl; 
+  size5Dch[4] = 0; 
   ImageType5D::IndexType start5Dch = region5D.GetIndex();
-  std::cout << "Extract 5D to 4D channell " << channelnr << ": start5Dch= " 
-	<< start5Dch[0] << ", " << start5Dch[1] << ", " << start5Dch[2] << ", " << start5Dch[3] << ", " << start5Dch[4] << std::endl; 
   start5Dch[4] = channelnr;
-  std::cout << "Extract 5D to 4D channell " << channelnr << ": start5Dch= " 
-	<< start5Dch[0] << ", " << start5Dch[1] << ", " << start5Dch[2] << ", " << start5Dch[3] << ", " << start5Dch[4] << std::endl; 
   ImageType5D::RegionType region5Dch2;
   region5Dch2.SetSize(  size5Dch  );
   region5Dch2.SetIndex( start5Dch );
@@ -255,13 +243,9 @@ ImageType3D::Pointer extractchannel(ImageType5D::Pointer image5D, int channelnr)
   extractfilter5D4Dch2->Update();
   ImageType4D::RegionType region4D = extractfilter5D4Dch2->GetOutput()->GetLargestPossibleRegion();
   ImageType4D::SizeType size4Dt1 = region4D.GetSize();
-  std::cout << "Extract 4D to 3D timepoint 1: size4Dt1= " << size4Dt1[0] << ", " << size4Dt1[1] << ", " << size4Dt1[2] << ", " << size4Dt1[3] << std::endl;  
   size4Dt1[3] = 0;
-  std::cout << "Extract 4D to 3D timepoint 1: size4Dt1= " << size4Dt1[0] << ", " << size4Dt1[1] << ", " << size4Dt1[2] << ", " << size4Dt1[3] << std::endl;  
   ImageType4D::IndexType start4Dt1 = region4D.GetIndex();
-  std::cout << "Extract 4D to 3D timepoint 1: start4Dt1= " << start4Dt1[0] << ", " << start4Dt1[1] << ", " << start4Dt1[2] << ", " << start4Dt1[3] << std::endl; 
   start4Dt1[3] = 0;
-  std::cout << "Extract 4D to 3D timepoint 1: start4Dt1= " << start4Dt1[0] << ", " << start4Dt1[1] << ", " << start4Dt1[2] << ", " << start4Dt1[3] << std::endl; 
   ImageType4D::RegionType region4Dt1;
   region4Dt1.SetSize(  size4Dt1  );
   region4Dt1.SetIndex( start4Dt1 );
@@ -289,7 +273,7 @@ void printHistogram(ImageType3D::Pointer inputImageMIP) {
   histogramFilter->Update();
   const HistogramType * histogram = histogramFilter->GetOutput();
   const unsigned int histogramSize = histogram->Size();
-  std::cout << std::endl << "Histogram size " << histogramSize << std::endl;
+  std::cout << "Histogram size " << histogramSize << std::endl;
   for( unsigned int bin=0; bin < histogramSize; bin++ )
     {
     std::cout << "bin = " << std::setw(3) << bin << 

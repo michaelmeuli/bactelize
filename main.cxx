@@ -48,7 +48,6 @@ int main( int argc, char * argv [] )
   ImageType5D::Pointer image5D = seriesreader.get5DImage(seriesnr);
   seriesreader.dumpimageio();
   dumpmetadatadic(image5D);
-//  setSpacing(image5D, xspacing, yspacing, zspacing, tspacing, cspacing);
 
   ImageType3D::Pointer image3Dnuclei = extractchannel(image5D, nucleichannel);
   ImageType3D::Pointer image3Dbacteria = extractchannel(image5D, bacteriachannel);
@@ -60,11 +59,6 @@ int main( int argc, char * argv [] )
   rescaleNormalized->SetInput( normalizeFilter->GetOutput() ); 
   rescaleNormalized->SetOutputMinimum(0);
   rescaleNormalized->SetOutputMaximum(4095);
-
-  rescaleNormalized->Update();
-  printHistogram( rescaleNormalized->GetOutput() );
-  std::cout << std::endl;
-
   MedianFilterType::Pointer medianFilter = MedianFilterType::New();
   MedianFilterType::InputSizeType radius; 
   radius.Fill(1);
@@ -77,34 +71,28 @@ int main( int argc, char * argv [] )
   binaryfilter->SetLowerThreshold(binaryLowerThresholdBacteria);
   binaryfilter->Update();
   BinaryImageType3D::Pointer binaryimage3Dbacteria = binaryfilter->GetOutput(); 
-  
   setSpacing(binaryimage3Dbacteria, xspacing, yspacing, zspacing);
-  printSpacing(binaryimage3Dbacteria);
-  
 
-  typedef itk::BinaryImageToLabelMapFilter<BinaryImageType3D> BinaryImageToLabelMapFilterType;
+  printHistogram( rescaleNormalized->GetOutput() );
+  std::cout << std::endl;
+  printSpacing(binaryimage3Dbacteria);
+  std::cout << std::endl;
+  std::string outputfilenamefileout = outputdirectory + "fileout.txt";
+  std::ofstream fileout(outputfilenamefileout.c_str()); 
+
   BinaryImageToLabelMapFilterType::Pointer binaryImageToLabelMapFilter = BinaryImageToLabelMapFilterType::New();
   binaryImageToLabelMapFilter->SetInput(binaryimage3Dbacteria);
-  binaryImageToLabelMapFilter->Update();
-  std::cout << "There are " << binaryImageToLabelMapFilter->GetOutput()->GetNumberOfLabelObjects() << " label map objects." << std::endl;
-
-  typedef itk::LabelMapToLabelImageFilter<BinaryImageToLabelMapFilterType::OutputImageType, BinaryImageType3D> LabelMapToLabelImageFilterType;
   LabelMapToLabelImageFilterType::Pointer labelMapToLabelImageFilter = LabelMapToLabelImageFilterType::New();
   labelMapToLabelImageFilter->SetInput(binaryImageToLabelMapFilter->GetOutput());
-  labelMapToLabelImageFilter->Update();
-
-  typedef itk::LabelImageToShapeLabelMapFilter <BinaryImageType3D> LabelImageToShapeLabelMapFilterType;
   LabelImageToShapeLabelMapFilterType::Pointer labelImageToShapeLabelMapFilter = LabelImageToShapeLabelMapFilterType::New ();
   labelImageToShapeLabelMapFilter->SetInput( labelMapToLabelImageFilter->GetOutput() );
   labelImageToShapeLabelMapFilter->Update();
+  assert (binaryImageToLabelMapFilter->GetOutput()->GetNumberOfLabelObjects() == labelImageToShapeLabelMapFilter->GetOutput()->GetNumberOfLabelObjects()); 
 
-
-  std::cout << "There are " << labelImageToShapeLabelMapFilter->GetOutput()->GetNumberOfLabelObjects() << " shape label map objects." << std::endl << std::endl;
   std::vector<unsigned long> labelsToRemove;
   for(unsigned int i = 0; i < labelImageToShapeLabelMapFilter->GetOutput()->GetNumberOfLabelObjects(); i++) {
     LabelImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType* labelObject = labelImageToShapeLabelMapFilter->GetOutput()->GetNthLabelObject(i);
-    labelObject->Print(std::cout, 5);
-    std::cout << std::endl;
+//  labelObject->Print(std::cout, 5);
     if (labelObject->GetNumberOfPixels() < minNumberOfPixels) {                      // labelObject->GetPhysicalSize() < 10   didn't work as value is always 0
       labelsToRemove.push_back(labelObject->GetLabel());
       }
@@ -116,34 +104,24 @@ int main( int argc, char * argv [] )
     }
   std::cout << "There are " << binaryImageToLabelMapFilter->GetOutput()->GetNumberOfLabelObjects() 
             << " objects remaining in label map." << std::endl << std::endl;
-  binaryImageToLabelMapFilter->Update();
-  labelMapToLabelImageFilter->Update();
 
-  typedef itk::LabelImageToStatisticsLabelMapFilter< BinaryImageType3D, ImageType3D > LabelImageToStatisticsLabelMapFilterType;
   LabelImageToStatisticsLabelMapFilterType::Pointer labelImageToStatisticsLabelMapFilter = LabelImageToStatisticsLabelMapFilterType::New();
   labelImageToStatisticsLabelMapFilter->SetFeatureImage(image3Dred);
   labelImageToStatisticsLabelMapFilter->SetInput(labelMapToLabelImageFilter->GetOutput());
   labelImageToStatisticsLabelMapFilter->Update();
+  assert (binaryImageToLabelMapFilter->GetOutput()->GetNumberOfLabelObjects() == labelImageToStatisticsLabelMapFilter->GetOutput()->GetNumberOfLabelObjects()); 
 
-// assert binaryImageToLabelMapFilter->GetOutput()->GetNumberOfLabelObjects() == labelImageToStatisticsLabelMapFilter->GetOutput()->GetNumberOfLabelObjects() 
   unsigned int bacteriacount = labelImageToStatisticsLabelMapFilter->GetOutput()->GetNumberOfLabelObjects();
-  unsigned int colcount = 0; 
   for(unsigned int i = 0; i < labelImageToStatisticsLabelMapFilter->GetOutput()->GetNumberOfLabelObjects(); i++) {
     LabelImageToStatisticsLabelMapFilterType::OutputImageType::LabelObjectType* labelObject = labelImageToStatisticsLabelMapFilter->GetOutput()->GetNthLabelObject(i);
-    labelObject->Print(std::cout, 4);
+//  labelObject->Print(std::cout, 4);
     double mean = labelObject->GetMean();
     std::cout << "Mean value of object with label " << (int)(labelObject->GetLabel()) << " in lysosomechannel: " << mean << std::endl;   //todo c++ style cast
-    if ( mean > meanRedThreshold ) {
-      colcount++;
-      }
-    std::cout << std::endl;    
+    fileout << mean << "\t";
     }
   std::cout << "Total bacteria counted (in statistics label map): " << bacteriacount << std::endl;
-  std::cout << "Bacteria colocalizing in lysosomechannel: " << colcount << std::endl;
+  std::cout << std::endl;
 
-
-  typedef itk::LabelMapToAttributeImageFilter< LabelImageToStatisticsLabelMapFilterType::OutputImageType, ImageType3D,
-     itk::Functor::MeanLabelObjectAccessor<LabelImageToStatisticsLabelMapFilterType::OutputImageType::LabelObjectType> > L2ImageType;
   L2ImageType::Pointer labelMapToReadMeanImage = L2ImageType::New();
   labelMapToReadMeanImage->SetInput( labelImageToStatisticsLabelMapFilter->GetOutput() );
   labelMapToReadMeanImage->Update();
@@ -168,7 +146,6 @@ int main( int argc, char * argv [] )
   std::cout << "Writing file: " << fulloutputfilename2Dred << " ..." << std::endl;
   write2D(image2Dred, fulloutputfilename2Dred);
 
-  typedef itk::LabelMapToBinaryImageFilter<BinaryImageToLabelMapFilterType::OutputImageType, BinaryImageType3D> LabelMapToBinaryImageFilterType;
   LabelMapToBinaryImageFilterType::Pointer labelMapToBinaryImageFilter = LabelMapToBinaryImageFilterType::New();
   labelMapToBinaryImageFilter->SetInput(binaryImageToLabelMapFilter->GetOutput());
   labelMapToBinaryImageFilter->Update();
@@ -179,14 +156,10 @@ int main( int argc, char * argv [] )
   write2D(binaryimage2Dbacteria, fulloutputfilenamebinary2Dbacteria);
 
   ImageType2D::Pointer image2DReadMean = maxintprojection(image3DbacteriaReadMean);
-  typedef itk::RGBPixel<unsigned char>   RGBPixelType;
-  typedef itk::Image<RGBPixelType, 2>    RGBImageType;
-  typedef itk::ScalarToRGBColormapImageFilter<ImageType2D, RGBImageType> RGBFilterType;
   RGBFilterType::Pointer colormapImageFilter = RGBFilterType::New();
   colormapImageFilter->SetInput(image2DReadMean);
   colormapImageFilter->SetColormap( RGBFilterType::Jet );
   colormapImageFilter->Update();
-  typedef itk::ImageFileWriter<RGBImageType> WriterTypeRGB;
   std::string outputfilename2DReadMean = seriesreader.getFilename(seriesnr, "_e_ReadMean.tiff");
   std::string fulloutputfilename2DReadMean = outputdirectory + outputfilename2DReadMean; 
   WriterTypeRGB::Pointer writerRGB = WriterTypeRGB::New();

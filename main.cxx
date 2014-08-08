@@ -38,20 +38,24 @@ int main( int argc, char * argv [] )
   float cspacing = 1.0;
   std::string fullinputfilename = argv[1];
   std::string outputdirectory = argv[2];
-  int seriesnr = 1; 
+  int seriesnr = 14; 
   int binaryLowerThresholdBacteria = 200;
   int minNumberOfPixels = 100;
   int meanRedThreshold = 50;
 
   SeriesReader seriesreader(fullinputfilename);
+  
   std::cout << "Getting 5D Image of series number: " << seriesnr << std::endl;
-  ImageType5D::Pointer image5D = seriesreader.get5DImage(seriesnr);
-  seriesreader.dumpimageio();
+  ImageType5D::Pointer image5D =  ImageType5D::New();
+  image5D = seriesreader.get5DImage(image5D, seriesnr);    
+
+  dumpimageio(seriesreader.getReader());
   dumpmetadatadic(image5D);
 
   ImageType3D::Pointer image3Dnuclei = extractchannel(image5D, nucleichannel);
   ImageType3D::Pointer image3Dbacteria = extractchannel(image5D, bacteriachannel);
   ImageType3D::Pointer image3Dred = extractchannel(image5D, lysosomechannel);
+  image5D = NULL;
   
   NormalizeFilterType::Pointer  normalizeFilter = NormalizeFilterType::New();
   normalizeFilter->SetInput( image3Dbacteria );
@@ -88,7 +92,6 @@ int main( int argc, char * argv [] )
   labelImageToShapeLabelMapFilter->SetInput( labelMapToLabelImageFilter->GetOutput() );
   labelImageToShapeLabelMapFilter->Update();
   assert (binaryImageToLabelMapFilter->GetOutput()->GetNumberOfLabelObjects() == labelImageToShapeLabelMapFilter->GetOutput()->GetNumberOfLabelObjects()); 
-
   std::vector<unsigned long> labelsToRemove;
   for(unsigned int i = 0; i < labelImageToShapeLabelMapFilter->GetOutput()->GetNumberOfLabelObjects(); i++) {
     LabelImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType* labelObject = labelImageToShapeLabelMapFilter->GetOutput()->GetNthLabelObject(i);
@@ -102,21 +105,19 @@ int main( int argc, char * argv [] )
   for(unsigned int i = 0; i < labelsToRemove.size(); ++i) {
     binaryImageToLabelMapFilter->GetOutput()->RemoveLabel(labelsToRemove[i]);
     }
-  std::cout << "There are " << binaryImageToLabelMapFilter->GetOutput()->GetNumberOfLabelObjects() 
-            << " objects remaining in label map." << std::endl << std::endl;
+  std::cout << "There are " << binaryImageToLabelMapFilter->GetOutput()->GetNumberOfLabelObjects() << " objects remaining in label map." << std::endl << std::endl;
 
   LabelImageToStatisticsLabelMapFilterType::Pointer labelImageToStatisticsLabelMapFilter = LabelImageToStatisticsLabelMapFilterType::New();
   labelImageToStatisticsLabelMapFilter->SetFeatureImage(image3Dred);
   labelImageToStatisticsLabelMapFilter->SetInput(labelMapToLabelImageFilter->GetOutput());
   labelImageToStatisticsLabelMapFilter->Update();
   assert (binaryImageToLabelMapFilter->GetOutput()->GetNumberOfLabelObjects() == labelImageToStatisticsLabelMapFilter->GetOutput()->GetNumberOfLabelObjects()); 
-
   unsigned int bacteriacount = labelImageToStatisticsLabelMapFilter->GetOutput()->GetNumberOfLabelObjects();
   for(unsigned int i = 0; i < labelImageToStatisticsLabelMapFilter->GetOutput()->GetNumberOfLabelObjects(); i++) {
     LabelImageToStatisticsLabelMapFilterType::OutputImageType::LabelObjectType* labelObject = labelImageToStatisticsLabelMapFilter->GetOutput()->GetNthLabelObject(i);
 //  labelObject->Print(std::cout, 4);
     double mean = labelObject->GetMean();
-    std::cout << "Mean value of object with label " << (int)(labelObject->GetLabel()) << " in lysosomechannel: " << mean << std::endl;   //todo c++ style cast
+    std::cout << "Mean value of object with label " << static_cast<int>(labelObject->GetLabel()) << " in lysosomechannel: " << mean << std::endl; 
     fileout << mean << "\t";
     }
   std::cout << "Total bacteria counted (in statistics label map): " << bacteriacount << std::endl;
@@ -126,7 +127,6 @@ int main( int argc, char * argv [] )
   labelMapToReadMeanImage->SetInput( labelImageToStatisticsLabelMapFilter->GetOutput() );
   labelMapToReadMeanImage->Update();
   ImageType3D::Pointer image3DbacteriaReadMean = labelMapToReadMeanImage->GetOutput();
-  
 
   ImageType2D::Pointer image2Dnuclei = maxintprojection(image3Dnuclei);
   std::string outputfilename2Dnuclei = seriesreader.getFilename(seriesnr, "_a_nuclei.tiff");

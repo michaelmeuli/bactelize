@@ -80,6 +80,7 @@ typedef itk::ImageFileWriter<RGBImageType> WriterTypeRGB;
 ImageType2D::Pointer       maxintprojection(ImageType3D::Pointer, unsigned int projectionDirection = 2);
 BinaryImageType2D::Pointer maxintprojection(BinaryImageType3D::Pointer, unsigned int projectionDirection = 2);
 void dumpmetadatadic(ImageType5D::Pointer);
+void dumpimageio(ReaderType::Pointer);
 void setSpacing(ImageType5D::Pointer, float x, float y, float z, float t, float c);  //obsolete
 void setSpacing(BinaryImageType3D::Pointer image3D, float x, float y, float z);
 void printSpacing(BinaryImageType3D::Pointer);
@@ -92,18 +93,17 @@ void write2D(BinaryImageType2D::Pointer, std::string filenamepath);
 class SeriesReader {   
   public:
     SeriesReader(std::string inputFileName);
-    ImageType5D::Pointer get5DImage(int series); 
-    void dumpimageio();
+    ImageType5D::Pointer get5DImage(ImageType5D::Pointer, int series); 
     int getSeriesStart();
     int getSeriesEnd();
     std::string getFilename(int seriesnr, std::string suffix);
+    ReaderType::Pointer getReader();
 
   private:    
     itk::SCIFIOImageIO::Pointer m_io;
     ReaderType::Pointer m_reader;
     std::string m_inputFileName;
     StreamingFilter::Pointer m_streamer;
-    ImageType5D::Pointer m_image5D;
     int m_seriesStart;
     int m_seriesEnd;
 };

@@ -1,6 +1,16 @@
 #include "bactelize.h"
 
-
+extern int nucleichannel;
+extern int bacteriachannel;
+extern int lysosomechannel;
+extern float xspacing;
+extern float yspacing;
+extern float zspacing;
+extern float tspacing;
+extern float cspacing;
+extern int binaryLowerThresholdBacteria;
+extern int minNumberOfPixels;
+extern std::ofstream fileout;
 
 typedef itk::ImageLinearIteratorWithIndex< ImageType2D > LinearIteratorTypeInput;
 typedef itk::ImageSliceConstIteratorWithIndex< ImageType3D > SliceIteratorTypeInput;
@@ -228,7 +238,6 @@ void setSpacing(BinaryImageType3D::Pointer image3D, float x, float y, float z) {
   spacing[1] = y;  
   spacing[2] = z;  
   image3D->SetSpacing( spacing );
-  std::cout << std::endl;
   }
 
 
@@ -336,9 +345,11 @@ void write2D(BinaryImageType2D::Pointer image2Dbacteria, std::string filenamepat
   }
 
 
-SeriesReader::SeriesReader(std::string inputFileName)
-      : m_io(itk::SCIFIOImageIO::New()), m_reader(ReaderType::New()), m_inputFileName(inputFileName),
-        m_streamer(StreamingFilter::New()), m_seriesStart(0), m_seriesEnd(1) {
+SeriesReader::SeriesReader(std::string inputFileName, std::string outputdirectory)
+      : m_inputFileName(inputFileName), m_outputdirectory(outputdirectory) {
+  m_io = itk::SCIFIOImageIO::New();
+  m_reader = ReaderType::New();
+  m_streamer = StreamingFilter::New();
   m_io->DebugOn();
   std::cout << "reader->GetUseStreaming(): " << m_reader->GetUseStreaming() << std::endl;
   std::cout << "done checking streaming usage" << std::endl;
@@ -347,8 +358,9 @@ SeriesReader::SeriesReader(std::string inputFileName)
   m_streamer->SetInput( m_reader->GetOutput() );
   m_streamer->SetNumberOfStreamDivisions( 4 );
   m_reader->UpdateOutputInformation();
+  m_seriesStart = 0;
   m_seriesEnd = m_io->GetSeriesCount();
-  std::cout << "Number of series: " << m_seriesEnd + 1 << std::endl;
+  std::cout << "Number of series: " << m_seriesEnd << std::endl;
   std::cout << std::endl;
   }
 
@@ -399,4 +411,136 @@ std::string SeriesReader::getFilename(int seriesnr, std::string suffix) {
 
 ReaderType::Pointer SeriesReader::getReader() {
   return m_reader;
+}
+
+
+void SeriesReader::calculateSeries() {
+  for(int seriesnr=0; seriesnr < m_seriesEnd; seriesnr++ ) {
+
+    std::cout << "Getting 5D Image of series number: " << seriesnr << std::endl;
+    ImageType5D::Pointer image5D =  ImageType5D::New();
+    image5D = this->get5DImage(image5D, seriesnr);   
+//  dumpmetadatadic(image5D); 
+
+    ImageType3D::Pointer image3Dnuclei = extractchannel(image5D, nucleichannel);
+    ImageType3D::Pointer image3Dbacteria = extractchannel(image5D, bacteriachannel);
+    ImageType3D::Pointer image3Dred = extractchannel(image5D, lysosomechannel);
+    image5D = NULL;
+  
+    NormalizeFilterType::Pointer  normalizeFilter = NormalizeFilterType::New();
+    normalizeFilter->SetInput( image3Dbacteria );
+    RescaleFilterTypeNormalized::Pointer rescaleNormalized = RescaleFilterTypeNormalized::New();
+    rescaleNormalized->SetInput( normalizeFilter->GetOutput() ); 
+    rescaleNormalized->SetOutputMinimum(0);
+    rescaleNormalized->SetOutputMaximum(4095);
+    MedianFilterType::Pointer medianFilter = MedianFilterType::New();
+    MedianFilterType::InputSizeType radius; 
+    radius.Fill(1);
+    medianFilter->SetRadius(radius);
+    medianFilter->SetInput( rescaleNormalized->GetOutput() );
+    BinaryFilterType::Pointer binaryfilter = BinaryFilterType::New();
+    binaryfilter->SetInput( medianFilter->GetOutput() );
+    binaryfilter->SetOutsideValue(0);
+    binaryfilter->SetInsideValue(255);
+    binaryfilter->SetLowerThreshold(binaryLowerThresholdBacteria);
+    binaryfilter->Update();
+    BinaryImageType3D::Pointer binaryimage3Dbacteria = binaryfilter->GetOutput(); 
+    setSpacing(binaryimage3Dbacteria, xspacing, yspacing, zspacing);
+
+    printHistogram( rescaleNormalized->GetOutput() );
+    std::cout << std::endl;
+    printSpacing(binaryimage3Dbacteria);
+    std::cout << std::endl;
+
+    std::string outputfilenamefileout = m_outputdirectory + "fileout.txt";
+    fileout.open(outputfilenamefileout.c_str(), std::ofstream::app); 
+    std::string seriesName = this->getFilename(seriesnr);
+    fileout << seriesName << "\t";
+
+    BinaryImageToLabelMapFilterType::Pointer binaryImageToLabelMapFilter = BinaryImageToLabelMapFilterType::New();
+    binaryImageToLabelMapFilter->SetInput(binaryimage3Dbacteria);
+    LabelMapToLabelImageFilterType::Pointer labelMapToLabelImageFilter = LabelMapToLabelImageFilterType::New();
+    labelMapToLabelImageFilter->SetInput(binaryImageToLabelMapFilter->GetOutput());
+    LabelImageToShapeLabelMapFilterType::Pointer labelImageToShapeLabelMapFilter = LabelImageToShapeLabelMapFilterType::New ();
+    labelImageToShapeLabelMapFilter->SetInput( labelMapToLabelImageFilter->GetOutput() );
+    labelImageToShapeLabelMapFilter->Update();
+    assert (binaryImageToLabelMapFilter->GetOutput()->GetNumberOfLabelObjects() == labelImageToShapeLabelMapFilter->GetOutput()->GetNumberOfLabelObjects()); 
+    std::vector<unsigned long> labelsToRemove;
+    for(unsigned int i = 0; i < labelImageToShapeLabelMapFilter->GetOutput()->GetNumberOfLabelObjects(); i++) {
+      LabelImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType* labelObject = labelImageToShapeLabelMapFilter->GetOutput()->GetNthLabelObject(i);
+//    labelObject->Print(std::cout, 5);
+      if (labelObject->GetNumberOfPixels() < minNumberOfPixels) {                      // labelObject->GetPhysicalSize() < 10   didn't work as value is always 0
+        labelsToRemove.push_back(labelObject->GetLabel());
+        }
+      }    
+    std::cout << "There are " << binaryImageToLabelMapFilter->GetOutput()->GetNumberOfLabelObjects() << " label map objects." << std::endl;
+    std::cout << "Removing " << labelsToRemove.size() << " objects from label map." << std::endl;
+    for(unsigned int i = 0; i < labelsToRemove.size(); ++i) {
+      binaryImageToLabelMapFilter->GetOutput()->RemoveLabel(labelsToRemove[i]);
+      }
+    std::cout << "There are " << binaryImageToLabelMapFilter->GetOutput()->GetNumberOfLabelObjects() << " objects remaining in label map." << std::endl << std::endl;
+
+    LabelImageToStatisticsLabelMapFilterType::Pointer labelImageToStatisticsLabelMapFilter = LabelImageToStatisticsLabelMapFilterType::New();
+    labelImageToStatisticsLabelMapFilter->SetFeatureImage(image3Dred);
+    labelImageToStatisticsLabelMapFilter->SetInput(labelMapToLabelImageFilter->GetOutput());
+    labelImageToStatisticsLabelMapFilter->Update();
+    assert (binaryImageToLabelMapFilter->GetOutput()->GetNumberOfLabelObjects() == labelImageToStatisticsLabelMapFilter->GetOutput()->GetNumberOfLabelObjects()); 
+    unsigned int bacteriacount = labelImageToStatisticsLabelMapFilter->GetOutput()->GetNumberOfLabelObjects();
+    for(unsigned int i = 0; i < labelImageToStatisticsLabelMapFilter->GetOutput()->GetNumberOfLabelObjects(); i++) {
+      LabelImageToStatisticsLabelMapFilterType::OutputImageType::LabelObjectType* labelObject = labelImageToStatisticsLabelMapFilter->GetOutput()->GetNthLabelObject(i);
+  //  labelObject->Print(std::cout, 4);
+      double mean = labelObject->GetMean();
+      std::cout << "Mean value of object with label " << static_cast<int>(labelObject->GetLabel()) << " in lysosomechannel: " << mean << std::endl; 
+      fileout << mean << "\t";
+      }
+    fileout << "\n";
+    fileout.close();
+    std::cout << "Total bacteria counted (in statistics label map): " << bacteriacount << std::endl;
+    std::cout << std::endl;
+
+    L2ImageType::Pointer labelMapToReadMeanImage = L2ImageType::New();
+    labelMapToReadMeanImage->SetInput( labelImageToStatisticsLabelMapFilter->GetOutput() );
+    labelMapToReadMeanImage->Update();
+    ImageType3D::Pointer image3DbacteriaReadMean = labelMapToReadMeanImage->GetOutput();
+
+    ImageType2D::Pointer image2Dnuclei = maxintprojection(image3Dnuclei);
+    std::string outputfilename2Dnuclei = this->getFilename(seriesnr, "_a_nuclei.tiff");
+    std::string fulloutputfilename2Dnuclei = m_outputdirectory + outputfilename2Dnuclei; 
+    std::cout << "Writing file: " << fulloutputfilename2Dnuclei << " ..." << std::endl;
+    write2D(image2Dnuclei, fulloutputfilename2Dnuclei);
+
+    ImageType2D::Pointer image2Dbacteria = maxintprojection(image3Dbacteria);
+    std::string outputfilename2Dbacteria = this->getFilename(seriesnr, "_b_bacteria.tiff");
+    std::string fulloutputfilename2Dbacteria = m_outputdirectory + outputfilename2Dbacteria; 
+    std::cout << "Writing file: " << fulloutputfilename2Dbacteria << " ..." << std::endl;
+    write2D(image2Dbacteria, fulloutputfilename2Dbacteria);
+  
+    ImageType2D::Pointer image2Dred = maxintprojection(image3Dred);
+    std::string outputfilename2Dred = this->getFilename(seriesnr, "_c_lysosome.tiff");
+    std::string fulloutputfilename2Dred = m_outputdirectory + outputfilename2Dred; 
+    std::cout << "Writing file: " << fulloutputfilename2Dred << " ..." << std::endl;
+    write2D(image2Dred, fulloutputfilename2Dred);
+
+    LabelMapToBinaryImageFilterType::Pointer labelMapToBinaryImageFilter = LabelMapToBinaryImageFilterType::New();
+    labelMapToBinaryImageFilter->SetInput(binaryImageToLabelMapFilter->GetOutput());
+    labelMapToBinaryImageFilter->Update();
+    BinaryImageType2D::Pointer binaryimage2Dbacteria = maxintprojection(labelMapToBinaryImageFilter->GetOutput());
+    std::string outputfilenamebinary2Dbacteria = this->getFilename(seriesnr, "_d_bacteria_binary.tiff");
+    std::string fulloutputfilenamebinary2Dbacteria = m_outputdirectory + outputfilenamebinary2Dbacteria; 
+    std::cout << "Writing file: " << fulloutputfilenamebinary2Dbacteria << " ..." << std::endl;
+    write2D(binaryimage2Dbacteria, fulloutputfilenamebinary2Dbacteria);
+
+    ImageType2D::Pointer image2DReadMean = maxintprojection(image3DbacteriaReadMean);
+    RGBFilterType::Pointer colormapImageFilter = RGBFilterType::New();
+    colormapImageFilter->SetInput(image2DReadMean);
+    colormapImageFilter->SetColormap( RGBFilterType::Jet );
+    colormapImageFilter->Update();
+    std::string outputfilename2DReadMean = this->getFilename(seriesnr, "_e_ReadMean.tiff");
+    std::string fulloutputfilename2DReadMean = m_outputdirectory + outputfilename2DReadMean; 
+    WriterTypeRGB::Pointer writerRGB = WriterTypeRGB::New();
+    writerRGB->SetFileName( fulloutputfilename2DReadMean );             
+    writerRGB->SetInput(colormapImageFilter->GetOutput());
+    std::cout << "Writing file: " << fulloutputfilename2DReadMean << " ..." << std::endl;
+    writerRGB->Update();
+  }
 }

@@ -92,18 +92,20 @@ void write2D(BinaryImageType2D::Pointer, std::string filenamepath);
 
 class SeriesReader {   
   public:
-    SeriesReader(std::string inputFileName);
+    SeriesReader(std::string inputFileName, std::string outputdirectory);
     ImageType5D::Pointer get5DImage(ImageType5D::Pointer, int series); 
     int getSeriesStart();
     int getSeriesEnd();
-    std::string getFilename(int seriesnr, std::string suffix);
+    std::string getFilename(int seriesnr, std::string suffix = "");
     ReaderType::Pointer getReader();
+    void calculateSeries();
 
   private:    
     itk::SCIFIOImageIO::Pointer m_io;
     ReaderType::Pointer m_reader;
-    std::string m_inputFileName;
     StreamingFilter::Pointer m_streamer;
+    std::string m_inputFileName;
+    std::string m_outputdirectory;
     int m_seriesStart;
     int m_seriesEnd;
 };

@@ -17,6 +17,14 @@
  *=========================================================================*/
 
 #include "bactelize.h" 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <dirent.h>
+#include <cerrno>
+#include <cstring>
+#include <cstdlib>
+#include <cstdio>
+
 
 int nucleichannel      = 0;
 int bacteriachannel    = 1;
@@ -29,34 +37,71 @@ float cspacing = 1.0;
 int binaryLowerThresholdBacteria = 200;
 int minNumberOfPixels = 100;
 std::ofstream fileout;
+std::string fileoutName = "AA_results.txt";
+
+
+
+int getdir (std::string dir, std::vector<std::string> &files) {
+  DIR *dp;
+  struct dirent *dirp;
+  if((dp = opendir(dir.c_str())) == NULL) {
+    int errsv = errno;
+    std::cout << "Error(" << errsv << ") opening " << dir << std::endl;
+    std::cout << "Text version of the error code: " << std::strerror(errsv) << std::endl;
+    return errsv;
+    }
+  while ((dirp = readdir(dp)) != NULL) {
+    int status;
+    struct stat st_buf;
+    status = stat ((dir+dirp->d_name).c_str(), &st_buf);   //+std::string(dirp->d_name)
+    if (status != 0) {
+      printf ("Error, errno = %d\n", errno);
+      return 1;
+      }
+    if (S_ISREG (st_buf.st_mode)) {
+      files.push_back(dir+dirp->d_name);
+      }
+    }
+  closedir(dp);
+  return 0;
+}
+
+
 
 int main( int argc, char * argv [] )
 {
   if ( argc < 3 )
     {
     std::cerr << "Missing parameters. " << std::endl;
-    std::cerr << "Usage: " << argv[0] << " series.ome.tiff-file" << " outputdirectory" << std::endl;
+    std::cerr << "Usage: " << argv[0] << " inputdirectory" << " outputdirectory" << std::endl;
     return -1;
     }
     
-  std::string fullinputfilename = argv[1];
+  std::string inputdirectory = argv[1];
   std::string outputdirectory = argv[2];
-
-  std::string outputfilenamefileout = outputdirectory + "fileout.txt";
-  fileout.open(outputfilenamefileout.c_str()); 
+  
+  std::string fulloutputfilenameResults = outputdirectory + fileoutName;
+  fileout.open(fulloutputfilenameResults.c_str()); 
   fileout << "Bactelize!\n";
   fileout.close();
-
-  SeriesReader seriesreader(fullinputfilename, outputdirectory);
-  dumpimageio(seriesreader.getReader());
-  seriesreader.calculateSeries();
   
- 
-
-
+  std::string dir = std::string(inputdirectory);
+  std::vector<std::string> files = std::vector<std::string>();
+  if (getdir(dir,files)) std::exit(EXIT_FAILURE);   
+  for (unsigned int i = 0;i < files.size();i++) {
+    std::cout << files[i] << std::endl;
+    calculateSeries(files[i], outputdirectory);
+    fileout.open(fulloutputfilenameResults.c_str(), std::ofstream::app); 
+    fileout << std::endl << std::endl;
+    fileout.close();
+    }
 
   return EXIT_SUCCESS;
 }
+
+//    dumpimageio(seriesreader.getReader());
+
+
 
 
 

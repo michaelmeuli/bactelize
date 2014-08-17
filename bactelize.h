@@ -29,6 +29,7 @@
 #include "itkLabelImageToStatisticsLabelMapFilter.h"
 #include "itkScalarToRGBColormapImageFilter.h"
 #include "itkLabelMapToBinaryImageFilter.h"
+#include "itkTIFFImageIO.h"
 
 #include <fstream>
 #include <sstream>
@@ -75,6 +76,7 @@ typedef itk::RGBPixel<unsigned char>   RGBPixelType;
 typedef itk::Image<RGBPixelType, 2>    RGBImageType;
 typedef itk::ScalarToRGBColormapImageFilter<ImageType2D, RGBImageType> RGBFilterType;
 typedef itk::ImageFileWriter<RGBImageType> WriterTypeRGB;
+typedef  itk::TIFFImageIO TIFFIOType;
 
 
 ImageType2D::Pointer       maxintprojection(ImageType3D::Pointer, unsigned int projectionDirection = 2);
@@ -88,27 +90,10 @@ ImageType3D::Pointer extractchannel(ImageType5D::Pointer, int channelnr);
 void printHistogram(ImageType3D::Pointer);
 void write2D(ImageType2D::Pointer, std::string filenamepath);
 void write2D(BinaryImageType2D::Pointer, std::string filenamepath);
-
-
-class SeriesReader {   
-  public:
-    SeriesReader(std::string inputFileName, std::string outputdirectory);
-    ImageType5D::Pointer get5DImage(ImageType5D::Pointer, int series); 
-    int getSeriesStart();
-    int getSeriesEnd();
-    std::string getFilename(int seriesnr, std::string suffix = "");
-    ReaderType::Pointer getReader();
-    void calculateSeries();
-
-  private:    
-    itk::SCIFIOImageIO::Pointer m_io;
-    ReaderType::Pointer m_reader;
-    StreamingFilter::Pointer m_streamer;
-    std::string m_inputFileName;
-    std::string m_outputdirectory;
-    int m_seriesStart;
-    int m_seriesEnd;
-};
+std::string getFilename(std::string inputFileName, int seriesnr, int seriesCount, std::string suffix = "");
+int calculateSeries(std::string inputFileName, std::string outputdirectory);
 
 
 #endif
+
+

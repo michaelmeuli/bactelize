@@ -83,15 +83,14 @@ ImageType2D::Pointer       maxintprojection(ImageType3D::Pointer, unsigned int p
 BinaryImageType2D::Pointer maxintprojection(BinaryImageType3D::Pointer, unsigned int projectionDirection = 2);
 void dumpmetadatadic(ImageType5D::Pointer);
 void dumpimageio(ReaderType::Pointer);
-void setSpacing(ImageType5D::Pointer, float x, float y, float z, float t, float c);  //obsolete
-void setSpacing(BinaryImageType3D::Pointer image3D, float x, float y, float z);
 void printSpacing(BinaryImageType3D::Pointer);
 ImageType3D::Pointer extractchannel(ImageType5D::Pointer, int channelnr);
 void printHistogram(ImageType3D::Pointer);
+void printHistogram(std::string inputFileName, unsigned int seriesnr);
 void write2D(ImageType2D::Pointer, std::string filenamepath);
 void write2D(BinaryImageType2D::Pointer, std::string filenamepath);
 std::string getFilename(std::string inputFileName, int seriesnr, int seriesCount, std::string suffix = "");
-int calculateSeries(std::string inputFileName, std::string outputdirectory);
+int processSeries(std::string inputFileName, std::string outputdirectory);
 
 
 #endif

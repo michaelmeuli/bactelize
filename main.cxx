@@ -29,11 +29,6 @@
 int nucleichannel      = 0;
 int bacteriachannel    = 1;
 int lysosomechannel    = 2;
-float xspacing = 0.33;
-float yspacing = 0.33;
-float zspacing = 1.2;
-float tspacing = 1.0;
-float cspacing = 1.0;
 int binaryLowerThresholdBacteria = 200;
 int minNumberOfPixels = 100;
 std::ofstream fileout;
@@ -41,24 +36,25 @@ std::string fileoutName = "AA_results.txt";
 
 
 
-int getdir (std::string dir, std::vector<std::string> &files) {
+int getdir(std::string dir, std::vector<std::string> &files) {
+  errno = 0;
   DIR *dp;
   struct dirent *dirp;
-  if((dp = opendir(dir.c_str())) == NULL) {
+  if ((dp = opendir(dir.c_str())) == NULL) {
     int errsv = errno;
     std::cout << "Error(" << errsv << ") opening " << dir << std::endl;
     std::cout << "Text version of the error code: " << std::strerror(errsv) << std::endl;
-    return errsv;
+    return EXIT_FAILURE;
     }
   while ((dirp = readdir(dp)) != NULL) {
-    int status;
     struct stat st_buf;
-    status = stat ((dir+dirp->d_name).c_str(), &st_buf);   //+std::string(dirp->d_name)
-    if (status != 0) {
-      printf ("Error, errno = %d\n", errno);
-      return 1;
+    if (stat((dir+dirp->d_name).c_str(), &st_buf)) {
+      int errsv = errno;
+      std::cout << "Error(" << errsv << ") getting file status." << std::endl;
+      std::cout << "Text version of the error code: " << std::strerror(errsv) << std::endl;
+      return EXIT_FAILURE;
       }
-    if (S_ISREG (st_buf.st_mode)) {
+    if (S_ISREG(st_buf.st_mode)) {
       files.push_back(dir+dirp->d_name);
       }
     }
@@ -68,18 +64,18 @@ int getdir (std::string dir, std::vector<std::string> &files) {
 
 
 
+
 int main( int argc, char * argv [] )
 {
   if ( argc < 3 )
     {
     std::cerr << "Missing parameters. " << std::endl;
     std::cerr << "Usage: " << argv[0] << " inputdirectory" << " outputdirectory" << std::endl;
-    return -1;
-    }
-    
+    return EXIT_FAILURE;
+    }    
   std::string inputdirectory = argv[1];
   std::string outputdirectory = argv[2];
-  
+
   std::string fulloutputfilenameResults = outputdirectory + fileoutName;
   fileout.open(fulloutputfilenameResults.c_str()); 
   fileout << "Bactelize!\n";
@@ -87,10 +83,16 @@ int main( int argc, char * argv [] )
   
   std::string dir = std::string(inputdirectory);
   std::vector<std::string> files = std::vector<std::string>();
-  if (getdir(dir,files)) std::exit(EXIT_FAILURE);   
+  if (getdir(dir,files)) {
+    std::exit(EXIT_FAILURE);   
+    }
+  std::cout << std::endl;
+  std::cout << "Files found in directory:" << std::endl;
   for (unsigned int i = 0;i < files.size();i++) {
-    std::cout << files[i] << std::endl;
-    calculateSeries(files[i], outputdirectory);
+    std::cout << "  " << files[i] << std::endl;
+    } 
+  for (unsigned int i = 0;i < files.size();i++) {
+    processSeries(files[i], outputdirectory);
     fileout.open(fulloutputfilenameResults.c_str(), std::ofstream::app); 
     fileout << std::endl << std::endl;
     fileout.close();

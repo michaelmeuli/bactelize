@@ -194,53 +194,6 @@ void dumpimageio(ReaderType::Pointer reader) {
   }
 
 
-void setSpacing(ImageType5D::Pointer image5D, float x, float y, float z, float t, float c) {  //obsolete
-  // SetSpacing
-  std::cout << "--== Correcting spacing and setting origin ==--" << std::endl;
-  ImageType5D::SpacingType spacing;
-  spacing[0] = x;  
-  spacing[1] = y;  
-  spacing[2] = z;  
-  spacing[3] = t; 
-  spacing[4] = c;  
-  image5D->SetSpacing( spacing );
-  ImageType5D::PointType origin;
-  origin.Fill(0.0);
-  image5D->SetOrigin( origin );
-  ImageType5D::RegionType region5D = image5D->GetLargestPossibleRegion();
-  int regionDimIm = region5D.GetImageDimension();
-  const ImageType5D::SpacingType& sp = image5D->GetSpacing();
-  const ImageType5D::PointType& orgn = image5D->GetOrigin();
-  for(int i = 0; i < regionDimIm; i++)
-    {
-    std::cout << "\tDimension " << i + 1 << " Size: "
-              << region5D.GetSize(i) << std::endl;
-    }
-  for(int i = 0; i < regionDimIm; i++)
-  {
-    if ( region5D.GetSize(i) > 1 ) {
-      std::cout << "\tSpacing " << i + 1 << ": "
-                << sp[i] << std::endl;
-    }
-  }
-  for(int i = 0; i < regionDimIm; i++)
-    {
-    std::cout << "\tOrigin " << i + 1 << ": "
-              << orgn[i] << std::endl;
-    }
-  std::cout << std::endl;
-  }
-
-
-void setSpacing(BinaryImageType3D::Pointer image3D, float x, float y, float z) {  
-  std::cout << "--== Setting spacing ==--" << std::endl;
-  BinaryImageType3D::SpacingType spacing;
-  spacing[0] = x;  
-  spacing[1] = y;  
-  spacing[2] = z;  
-  image3D->SetSpacing( spacing );
-  }
-
 
 void printSpacing(BinaryImageType3D::Pointer image3D) {
   ImageType3D::RegionType region3D = image3D->GetLargestPossibleRegion();
@@ -262,6 +215,7 @@ void printSpacing(BinaryImageType3D::Pointer image3D) {
               << orgn[i] << std::endl;
     }
   }
+
 
 
 ImageType3D::Pointer extractchannel(ImageType5D::Pointer image5D, int channelnr) {
@@ -326,6 +280,58 @@ void printHistogram(ImageType3D::Pointer inputImageMIP) {
   }
 
 
+void printHistogram(std::string inputFileName, unsigned int seriesnr) {
+  std::cout << "Processing series of file: " << inputFileName << std::endl;
+  itk::SCIFIOImageIO::Pointer io = itk::SCIFIOImageIO::New();
+  io->DebugOn();
+  typename ReaderType::Pointer reader = ReaderType::New();
+  std::cout << "reader->GetUseStreaming(): " << reader->GetUseStreaming() << std::endl;
+  std::cout << "done checking streaming usage" << std::endl;
+  reader->SetImageIO(io);
+  reader->SetFileName(inputFileName);
+  typename StreamingFilter::Pointer streamer = StreamingFilter::New();
+  streamer->SetInput(reader->GetOutput());
+  streamer->SetNumberOfStreamDivisions(4);
+  ImageType5D::Pointer image5D =  ImageType5D::New();
+  image5D = streamer->GetOutput();
+  reader->UpdateOutputInformation();
+  io->SetSeries(0);
+  reader->Modified(); 
+  int seriesEnd = io->GetSeriesCount();
+
+  if (seriesnr < seriesEnd) {
+    io->SetSeries(seriesnr);
+    reader->Modified();
+    std::cout << "Reading seriesnr: " << seriesnr << std::endl;
+    image5D->Update();
+
+    ImageType3D::Pointer image3Dnuclei = extractchannel(image5D, nucleichannel);
+    ImageType3D::Pointer image3Dbacteria = extractchannel(image5D, bacteriachannel);
+    ImageType3D::Pointer image3Dred = extractchannel(image5D, lysosomechannel);
+  
+    NormalizeFilterType::Pointer  normalizeFilter = NormalizeFilterType::New();
+    normalizeFilter->SetInput( image3Dbacteria );
+    RescaleFilterTypeNormalized::Pointer rescaleNormalized = RescaleFilterTypeNormalized::New();
+    rescaleNormalized->SetInput( normalizeFilter->GetOutput() ); 
+    rescaleNormalized->SetOutputMinimum(0);
+    rescaleNormalized->SetOutputMaximum(4095);
+    MedianFilterType::Pointer medianFilter = MedianFilterType::New();
+    MedianFilterType::InputSizeType radius; 
+    radius.Fill(1);
+    medianFilter->SetRadius(radius);
+    medianFilter->SetInput( rescaleNormalized->GetOutput() );
+    BinaryFilterType::Pointer binaryfilter = BinaryFilterType::New();
+    binaryfilter->SetInput( medianFilter->GetOutput() );
+    binaryfilter->SetOutsideValue(0);
+    binaryfilter->SetInsideValue(255);
+    binaryfilter->SetLowerThreshold(binaryLowerThresholdBacteria);
+    binaryfilter->Update();
+    BinaryImageType3D::Pointer binaryimage3Dbacteria = binaryfilter->GetOutput(); 
+    printHistogram( rescaleNormalized->GetOutput() );
+    }
+}
+
+
 void write2D(ImageType2D::Pointer image2Dbacteria, std::string filenamepath) {
   RescaleFilterTypeWriter::Pointer rescaleFilter = RescaleFilterTypeWriter::New();
   rescaleFilter->SetInput( image2Dbacteria ); 
@@ -377,8 +383,8 @@ std::string getFilename(std::string inputFileName, int seriesnr, int seriesCount
   }
 
 
-int calculateSeries (std::string inputFileName, std::string outputdirectory) {
-  int seriesStart = 0;
+int processSeries(std::string inputFileName, std::string outputdirectory) {
+  std::cout << "Processing series of file: " << inputFileName << std::endl;
   itk::SCIFIOImageIO::Pointer io = itk::SCIFIOImageIO::New();
   io->DebugOn();
   typename ReaderType::Pointer reader = ReaderType::New();
@@ -392,13 +398,14 @@ int calculateSeries (std::string inputFileName, std::string outputdirectory) {
   ImageType5D::Pointer image5D =  ImageType5D::New();
   image5D = streamer->GetOutput();
   reader->UpdateOutputInformation();
-  io->SetSeries(seriesStart);
+  io->SetSeries(0);
   reader->Modified(); 
   int seriesEnd = io->GetSeriesCount();
-  int seriesCount = seriesEnd - seriesStart;
+  std::cout << "seriesEnd: " << seriesEnd << std::endl;
         
   int seriesnr=0;
   while ( seriesnr < seriesEnd ) {
+    std::cout << "Reading seriesnr: " << seriesnr << std::endl;
     image5D->Update();
 
     ImageType3D::Pointer image3Dnuclei = extractchannel(image5D, nucleichannel);
@@ -423,16 +430,16 @@ int calculateSeries (std::string inputFileName, std::string outputdirectory) {
     binaryfilter->SetLowerThreshold(binaryLowerThresholdBacteria);
     binaryfilter->Update();
     BinaryImageType3D::Pointer binaryimage3Dbacteria = binaryfilter->GetOutput(); 
-    setSpacing(binaryimage3Dbacteria, xspacing, yspacing, zspacing);
 
-    printHistogram( rescaleNormalized->GetOutput() );
+
+//    printHistogram( rescaleNormalized->GetOutput() );
     std::cout << std::endl;
     printSpacing(binaryimage3Dbacteria);
     std::cout << std::endl;
 
     std::string fulloutputfilenameResults = outputdirectory + fileoutName;
     fileout.open(fulloutputfilenameResults.c_str(), std::ofstream::app); 
-    std::string seriesName = getFilename(inputFileName, seriesnr, seriesCount);
+    std::string seriesName = getFilename(inputFileName, seriesnr, seriesEnd);
     fileout << seriesName << "\t";
 
     BinaryImageToLabelMapFilterType::Pointer binaryImageToLabelMapFilter = BinaryImageToLabelMapFilterType::New();
@@ -482,19 +489,19 @@ int calculateSeries (std::string inputFileName, std::string outputdirectory) {
     ImageType3D::Pointer image3DbacteriaReadMean = labelMapToReadMeanImage->GetOutput();
 
     ImageType2D::Pointer image2Dnuclei = maxintprojection(image3Dnuclei);
-    std::string outputfilename2Dnuclei = getFilename(inputFileName, seriesnr, seriesCount, "_a_nuclei.tiff");
+    std::string outputfilename2Dnuclei = getFilename(inputFileName, seriesnr, seriesEnd, "_a_nuclei.tiff");
     std::string fulloutputfilename2Dnuclei = outputdirectory + outputfilename2Dnuclei; 
     std::cout << "Writing file: " << fulloutputfilename2Dnuclei << " ..." << std::endl;
     write2D(image2Dnuclei, fulloutputfilename2Dnuclei);
 
     ImageType2D::Pointer image2Dbacteria = maxintprojection(image3Dbacteria);
-    std::string outputfilename2Dbacteria = getFilename(inputFileName, seriesnr, seriesCount, "_b_bacteria.tiff");
+    std::string outputfilename2Dbacteria = getFilename(inputFileName, seriesnr, seriesEnd, "_b_bacteria.tiff");
     std::string fulloutputfilename2Dbacteria = outputdirectory + outputfilename2Dbacteria; 
     std::cout << "Writing file: " << fulloutputfilename2Dbacteria << " ..." << std::endl;
     write2D(image2Dbacteria, fulloutputfilename2Dbacteria);
   
     ImageType2D::Pointer image2Dred = maxintprojection(image3Dred);
-    std::string outputfilename2Dred = getFilename(inputFileName,seriesnr, seriesCount, "_c_lysosome.tiff");
+    std::string outputfilename2Dred = getFilename(inputFileName,seriesnr, seriesEnd, "_c_lysosome.tiff");
     std::string fulloutputfilename2Dred = outputdirectory + outputfilename2Dred; 
     std::cout << "Writing file: " << fulloutputfilename2Dred << " ..." << std::endl;
     write2D(image2Dred, fulloutputfilename2Dred);
@@ -503,7 +510,7 @@ int calculateSeries (std::string inputFileName, std::string outputdirectory) {
     labelMapToBinaryImageFilter->SetInput(binaryImageToLabelMapFilter->GetOutput());
     labelMapToBinaryImageFilter->Update();
     BinaryImageType2D::Pointer binaryimage2Dbacteria = maxintprojection(labelMapToBinaryImageFilter->GetOutput());
-    std::string outputfilenamebinary2Dbacteria = getFilename(inputFileName, seriesnr, seriesCount, "_d_bacteria_binary.tiff");
+    std::string outputfilenamebinary2Dbacteria = getFilename(inputFileName, seriesnr, seriesEnd, "_d_bacteria_binary.tiff");
     std::string fulloutputfilenamebinary2Dbacteria = outputdirectory + outputfilenamebinary2Dbacteria; 
     std::cout << "Writing file: " << fulloutputfilenamebinary2Dbacteria << " ..." << std::endl;
     write2D(binaryimage2Dbacteria, fulloutputfilenamebinary2Dbacteria);
@@ -513,7 +520,7 @@ int calculateSeries (std::string inputFileName, std::string outputdirectory) {
     colormapImageFilter->SetInput(image2DReadMean);
     colormapImageFilter->SetColormap( RGBFilterType::Jet );
     colormapImageFilter->Update();
-    std::string outputfilename2DReadMean = getFilename(inputFileName, seriesnr, seriesCount, "_e_ReadMean.tiff");
+    std::string outputfilename2DReadMean = getFilename(inputFileName, seriesnr, seriesEnd, "_e_ReadMean.tiff");
     std::string fulloutputfilename2DReadMean = outputdirectory + outputfilename2DReadMean; 
     WriterTypeRGB::Pointer writerRGB = WriterTypeRGB::New();
     TIFFIOType::Pointer tiffIO = TIFFIOType::New();
@@ -528,8 +535,9 @@ int calculateSeries (std::string inputFileName, std::string outputdirectory) {
       io->SetSeries(seriesnr);
       reader->Modified();
       }
+    std::cout << std::endl;
   }
-
+  std::cout << std::endl;
   return EXIT_SUCCESS;
 }
 

@@ -76,7 +76,11 @@ typedef itk::RGBPixel<unsigned char>   RGBPixelType;
 typedef itk::Image<RGBPixelType, 2>    RGBImageType;
 typedef itk::ScalarToRGBColormapImageFilter<ImageType2D, RGBImageType> RGBFilterType;
 typedef itk::ImageFileWriter<RGBImageType> WriterTypeRGB;
-typedef  itk::TIFFImageIO TIFFIOType;
+typedef itk::TIFFImageIO TIFFIOType;
+typedef itk::ImageLinearIteratorWithIndex< ImageType2D > LinearIteratorTypeInput;
+typedef itk::ImageSliceConstIteratorWithIndex< ImageType3D > SliceIteratorTypeInput;
+typedef itk::ImageLinearIteratorWithIndex< BinaryImageType2D > LinearIteratorTypeBinary;
+typedef itk::ImageSliceConstIteratorWithIndex< BinaryImageType3D > SliceIteratorTypeBinary;
 
 
 ImageType2D::Pointer       maxintprojection(ImageType3D::Pointer, unsigned int projectionDirection = 2);
@@ -86,11 +90,10 @@ void dumpimageio(ReaderType::Pointer);
 void printSpacing(BinaryImageType3D::Pointer);
 ImageType3D::Pointer extractchannel(ImageType5D::Pointer, int channelnr);
 void printHistogram(ImageType3D::Pointer);
-void printHistogram(std::string inputFileName, unsigned int seriesnr);
 void write2D(ImageType2D::Pointer, std::string filenamepath);
 void write2D(BinaryImageType2D::Pointer, std::string filenamepath);
 std::string getFilename(std::string inputFileName, int seriesnr, int seriesCount, std::string suffix = "");
-int processSeries(std::string inputFileName, std::string outputdirectory);
+int processSeries(std::string inputFileName, std::string outputdirectory, bool vflag, bool tflag, int fileNr, int seriesNr);
 
 
 #endif

@@ -24,6 +24,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <cstdio>
+#include <algorithm>
 
 
 int nucleichannel      = 0;
@@ -33,6 +34,8 @@ int binaryLowerThresholdBacteria = 200;
 int minNumberOfPixels = 100;
 std::ofstream fileout;
 std::string fileoutName = "AA_results.txt";
+int numberOfStreamDivisions = 4;
+int numberOfBins = 50;
 
 
 
@@ -58,23 +61,52 @@ int getdir(std::string dir, std::vector<std::string> &files) {
       files.push_back(dir+dirp->d_name);
       }
     }
+  std::sort(files.begin(), files.end());
   closedir(dp);
   return 0;
 }
 
 
 
+int fail(char *argv[]) {
+  std::cerr << "\nUsage: " << argv[0] << " inputdirectory outputdirectory [OPTIONS]\n\n"
+  "OPTIONS:\n"
+  "-t <n1 n2>\n\tTest file n1 found in inputdirectory and series n2 of this file.\n"
+  "-v\n\tVerbose output.\n\n";
+  return EXIT_FAILURE;
+}
 
-int main( int argc, char * argv [] )
-{
-  if ( argc < 3 )
-    {
-    std::cerr << "Missing parameters. " << std::endl;
-    std::cerr << "Usage: " << argv[0] << " inputdirectory" << " outputdirectory" << std::endl;
-    return EXIT_FAILURE;
-    }    
+
+
+int main(int argc, char *argv[]) {
+
+  if( argc < 3) {
+    return fail(argv);
+    }
+
   std::string inputdirectory = argv[1];
   std::string outputdirectory = argv[2];
+
+  bool vflag = false;
+  bool tflag = false;
+  int fileNr = 0;
+  int seriesNr = 0;
+
+  // parse flags
+  for (int i = 3; i < argc; i++) {
+    if (strcmp (argv[i], "-v") == 0) {
+      vflag = true;
+      }
+    else if (strcmp (argv[i], "-t") == 0) {
+      if (i + 2 >= argc) {
+        return fail(argv);
+        }
+      fileNr = atoi(argv[i+1]);
+      seriesNr = atoi(argv[i+2]);
+      tflag = true;
+      i+=2;
+      }
+    }
 
   std::string fulloutputfilenameResults = outputdirectory + fileoutName;
   fileout.open(fulloutputfilenameResults.c_str()); 
@@ -91,18 +123,21 @@ int main( int argc, char * argv [] )
   for (unsigned int i = 0;i < files.size();i++) {
     std::cout << "  " << files[i] << std::endl;
     } 
-  for (unsigned int i = 0;i < files.size();i++) {
-    processSeries(files[i], outputdirectory);
-    fileout.open(fulloutputfilenameResults.c_str(), std::ofstream::app); 
-    fileout << std::endl << std::endl;
-    fileout.close();
+  std::cout << std::endl;
+  if (tflag) {
+    processSeries(files[fileNr], outputdirectory, vflag, tflag, fileNr, seriesNr);
+    }
+  else {
+    for (unsigned int i = 0;i < files.size();i++) {
+      processSeries(files[i], outputdirectory, vflag, tflag, fileNr, seriesNr);
+      fileout.open(fulloutputfilenameResults.c_str(), std::ofstream::app); 
+      fileout << std::endl << std::endl;
+      fileout.close();
+      }
     }
 
   return EXIT_SUCCESS;
 }
-
-//    dumpimageio(seriesreader.getReader());
-
 
 
 

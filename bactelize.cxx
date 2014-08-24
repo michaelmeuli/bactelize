@@ -3,18 +3,13 @@
 extern int nucleichannel;
 extern int bacteriachannel;
 extern int lysosomechannel;
-extern float xspacing;
-extern float yspacing;
-extern float zspacing;
-extern float tspacing;
-extern float cspacing;
 extern int binaryLowerThresholdBacteria;
 extern int minNumberOfPixels;
 extern std::ofstream fileout;
 extern std::string fileoutName;
+extern int numberOfStreamDivisions;
+extern int numberOfBins;
 
-typedef itk::ImageLinearIteratorWithIndex< ImageType2D > LinearIteratorTypeInput;
-typedef itk::ImageSliceConstIteratorWithIndex< ImageType3D > SliceIteratorTypeInput;
 
 ImageType2D::Pointer maxintprojection(ImageType3D::Pointer inputImageMIP, unsigned int projectionDirection) {
   unsigned int i, j;
@@ -79,8 +74,6 @@ ImageType2D::Pointer maxintprojection(ImageType3D::Pointer inputImageMIP, unsign
   }
 
 
-typedef itk::ImageLinearIteratorWithIndex< BinaryImageType2D > LinearIteratorTypeBinary;
-typedef itk::ImageSliceConstIteratorWithIndex< BinaryImageType3D > SliceIteratorTypeBinary;
 
 BinaryImageType2D::Pointer maxintprojection(BinaryImageType3D::Pointer inputImageMIP, unsigned int projectionDirection) {
   unsigned int i, j;
@@ -155,7 +148,6 @@ void dumpmetadatadic(ImageType5D::Pointer image5D) {
     itk::ExposeMetaData<std::string>( imgMetaDictionary, *itKey, tmp );
     std::cout << "\t" << *itKey << " ---> " << tmp << std::endl;
     }
-  std::cout << std::endl;
   }
 
 
@@ -190,7 +182,6 @@ void dumpimageio(ReaderType::Pointer reader) {
             << imageIO->GetNumberOfComponents() << std::endl;
   std::cout << "\tNumber of Dimensions: "
             << imageIO->GetNumberOfDimensions() << std::endl;
-  std::cout << std::endl;
   }
 
 
@@ -256,8 +247,8 @@ ImageType3D::Pointer extractchannel(ImageType5D::Pointer image5D, int channelnr)
 void printHistogram(ImageType3D::Pointer inputImageMIP) {
   HistogramFilterType::Pointer histogramFilter = HistogramFilterType::New();
   typedef HistogramFilterType::HistogramSizeType   SizeType;
-  SizeType size( 1 );
-  size[0] =  40;        // number of bins for the green channel
+  SizeType size(1);
+  size[0] =  numberOfBins;     
   histogramFilter->SetHistogramSize( size );
   histogramFilter->SetMarginalScale( 10.0 ); 
   HistogramFilterType::HistogramMeasurementVectorType lowerBound( 1 );
@@ -278,58 +269,6 @@ void printHistogram(ImageType3D::Pointer inputImageMIP) {
       "        frequency = " << std::setw(10) << histogram->GetFrequency( bin, 0 ) << std::endl;    
     }    
   }
-
-
-void printHistogram(std::string inputFileName, unsigned int seriesnr) {
-  std::cout << "Processing series of file: " << inputFileName << std::endl;
-  itk::SCIFIOImageIO::Pointer io = itk::SCIFIOImageIO::New();
-  io->DebugOn();
-  typename ReaderType::Pointer reader = ReaderType::New();
-  std::cout << "reader->GetUseStreaming(): " << reader->GetUseStreaming() << std::endl;
-  std::cout << "done checking streaming usage" << std::endl;
-  reader->SetImageIO(io);
-  reader->SetFileName(inputFileName);
-  typename StreamingFilter::Pointer streamer = StreamingFilter::New();
-  streamer->SetInput(reader->GetOutput());
-  streamer->SetNumberOfStreamDivisions(4);
-  ImageType5D::Pointer image5D =  ImageType5D::New();
-  image5D = streamer->GetOutput();
-  reader->UpdateOutputInformation();
-  io->SetSeries(0);
-  reader->Modified(); 
-  int seriesEnd = io->GetSeriesCount();
-
-  if (seriesnr < seriesEnd) {
-    io->SetSeries(seriesnr);
-    reader->Modified();
-    std::cout << "Reading seriesnr: " << seriesnr << std::endl;
-    image5D->Update();
-
-    ImageType3D::Pointer image3Dnuclei = extractchannel(image5D, nucleichannel);
-    ImageType3D::Pointer image3Dbacteria = extractchannel(image5D, bacteriachannel);
-    ImageType3D::Pointer image3Dred = extractchannel(image5D, lysosomechannel);
-  
-    NormalizeFilterType::Pointer  normalizeFilter = NormalizeFilterType::New();
-    normalizeFilter->SetInput( image3Dbacteria );
-    RescaleFilterTypeNormalized::Pointer rescaleNormalized = RescaleFilterTypeNormalized::New();
-    rescaleNormalized->SetInput( normalizeFilter->GetOutput() ); 
-    rescaleNormalized->SetOutputMinimum(0);
-    rescaleNormalized->SetOutputMaximum(4095);
-    MedianFilterType::Pointer medianFilter = MedianFilterType::New();
-    MedianFilterType::InputSizeType radius; 
-    radius.Fill(1);
-    medianFilter->SetRadius(radius);
-    medianFilter->SetInput( rescaleNormalized->GetOutput() );
-    BinaryFilterType::Pointer binaryfilter = BinaryFilterType::New();
-    binaryfilter->SetInput( medianFilter->GetOutput() );
-    binaryfilter->SetOutsideValue(0);
-    binaryfilter->SetInsideValue(255);
-    binaryfilter->SetLowerThreshold(binaryLowerThresholdBacteria);
-    binaryfilter->Update();
-    BinaryImageType3D::Pointer binaryimage3Dbacteria = binaryfilter->GetOutput(); 
-    printHistogram( rescaleNormalized->GetOutput() );
-    }
-}
 
 
 void write2D(ImageType2D::Pointer image2Dbacteria, std::string filenamepath) {
@@ -383,7 +322,7 @@ std::string getFilename(std::string inputFileName, int seriesnr, int seriesCount
   }
 
 
-int processSeries(std::string inputFileName, std::string outputdirectory) {
+int processSeries(std::string inputFileName, std::string outputdirectory, bool vflag, bool tflag, int fileNr, int seriesNr) {
   std::cout << "Processing series of file: " << inputFileName << std::endl;
   itk::SCIFIOImageIO::Pointer io = itk::SCIFIOImageIO::New();
   io->DebugOn();
@@ -394,16 +333,22 @@ int processSeries(std::string inputFileName, std::string outputdirectory) {
   reader->SetFileName(inputFileName);
   typename StreamingFilter::Pointer streamer = StreamingFilter::New();
   streamer->SetInput(reader->GetOutput());
-  streamer->SetNumberOfStreamDivisions(4);
+  streamer->SetNumberOfStreamDivisions(numberOfStreamDivisions);
   ImageType5D::Pointer image5D =  ImageType5D::New();
   image5D = streamer->GetOutput();
   reader->UpdateOutputInformation();
   io->SetSeries(0);
   reader->Modified(); 
   int seriesEnd = io->GetSeriesCount();
-  std::cout << "seriesEnd: " << seriesEnd << std::endl;
-        
+  std::cout << "seriesEnd: " << seriesEnd << std::endl;  
+
   int seriesnr=0;
+  if (tflag) {
+    seriesnr = seriesNr;
+    seriesEnd = seriesNr+1;
+    io->SetSeries(seriesnr);
+    reader->Modified();
+    }
   while ( seriesnr < seriesEnd ) {
     std::cout << "Reading seriesnr: " << seriesnr << std::endl;
     image5D->Update();
@@ -431,11 +376,17 @@ int processSeries(std::string inputFileName, std::string outputdirectory) {
     binaryfilter->Update();
     BinaryImageType3D::Pointer binaryimage3Dbacteria = binaryfilter->GetOutput(); 
 
-
-//    printHistogram( rescaleNormalized->GetOutput() );
-    std::cout << std::endl;
-    printSpacing(binaryimage3Dbacteria);
-    std::cout << std::endl;
+    if (vflag) {
+      std::cout << std::endl;
+      dumpimageio(reader);
+      std::cout << std::endl;
+      dumpmetadatadic(image5D);
+      std::cout << std::endl;
+      printHistogram(rescaleNormalized->GetOutput());
+      std::cout << std::endl;
+      printSpacing(binaryimage3Dbacteria);
+      std::cout << std::endl;
+      }
 
     std::string fulloutputfilenameResults = outputdirectory + fileoutName;
     fileout.open(fulloutputfilenameResults.c_str(), std::ofstream::app); 
@@ -453,7 +404,10 @@ int processSeries(std::string inputFileName, std::string outputdirectory) {
     std::vector<unsigned long> labelsToRemove;
     for(unsigned int i = 0; i < labelImageToShapeLabelMapFilter->GetOutput()->GetNumberOfLabelObjects(); i++) {
       LabelImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType* labelObject = labelImageToShapeLabelMapFilter->GetOutput()->GetNthLabelObject(i);
-//    labelObject->Print(std::cout, 5);
+      if (vflag) {
+        labelObject->Print(std::cout, 2);
+        std::cout << std::endl;
+        }
       if (labelObject->GetNumberOfPixels() < minNumberOfPixels) {                      // labelObject->GetPhysicalSize() < 10   didn't work as value is always 0
         labelsToRemove.push_back(labelObject->GetLabel());
         }
@@ -473,7 +427,10 @@ int processSeries(std::string inputFileName, std::string outputdirectory) {
     unsigned int bacteriacount = labelImageToStatisticsLabelMapFilter->GetOutput()->GetNumberOfLabelObjects();
     for(unsigned int i = 0; i < labelImageToStatisticsLabelMapFilter->GetOutput()->GetNumberOfLabelObjects(); i++) {
       LabelImageToStatisticsLabelMapFilterType::OutputImageType::LabelObjectType* labelObject = labelImageToStatisticsLabelMapFilter->GetOutput()->GetNthLabelObject(i);
-  //  labelObject->Print(std::cout, 4);
+      if (vflag) {
+        labelObject->Print(std::cout, 5);
+        std::cout << std::endl;
+        }
       double mean = labelObject->GetMean();
       std::cout << "Mean value of object with label " << static_cast<int>(labelObject->GetLabel()) << " in lysosomechannel: " << mean << std::endl; 
       fileout << mean << "\t";

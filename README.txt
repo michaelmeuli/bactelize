@@ -13,9 +13,8 @@ Use of itkSCIFIOImageIOTest with ome-tiff files:
 ./SCIFIOTestDriver itkSCIFIOImageIOTest bfconvert_output/output_series_0.ome.tiff test.ome.tiff -w -a -d 5
 
 Known Bugs:
-Mark Hiner (20.08.2014): "I'm assuming the # of planes to read isn't being updated for each series.. I'll look into it when I get a chance."
-And I guess I have a memory leak (which might also be related to SCIFIO).
-(https://github.com/scifio/scifio-imageio/issues)
+Mark Hiner from SCIFIO (20.08.2014): 
+  "I'm assuming the # of planes to read isn't being updated for each series.. I'll look into it when I get a chance."
 
 Original .lif files have been converted with Bio-Formats 5.0.3 with:
 ./bfconvert /path/to/live-A.lif /path/to/live-A.ome.tiff

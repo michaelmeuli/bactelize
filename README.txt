@@ -10,7 +10,7 @@ Code for reading the files is taken from:
 https://github.com/scifio/scifio-imageio/blob/master/test/itkSCIFIOImageIOTest.cxx
 
 Use of itkSCIFIOImageIOTest with ome-tiff files:
-./SCIFIOTestDriver itkSCIFIOImageIOTest bfconvert_output/output_series_0.ome.tiff test.ome.tiff -w -a -d 5
+./SCIFIOTestDriver itkSCIFIOImageIOTest /path/to/dead-A.ome.tiff /path/to/dead-A.ome.tiff -w -a -d 5
 
 Known Bugs:
 Mark Hiner from SCIFIO (20.08.2014): 

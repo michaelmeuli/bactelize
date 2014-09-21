@@ -30,6 +30,11 @@
 #include "itkScalarToRGBColormapImageFilter.h"
 #include "itkLabelMapToBinaryImageFilter.h"
 #include "itkTIFFImageIO.h"
+#include "itkVector.h"
+#include "itkListSample.h"
+#include "itkWeightedCentroidKdTreeGenerator.h"
+#include "itkEuclideanDistanceMetric.h"
+
 
 #include <fstream>
 #include <sstream>
@@ -41,6 +46,7 @@
 // #define NDEBUG
 #include <cassert>
 #include <fstream>
+#include <set>
 
 
 typedef unsigned short InputPixelType;
@@ -81,6 +87,13 @@ typedef itk::ImageLinearIteratorWithIndex< ImageType2D > LinearIteratorTypeInput
 typedef itk::ImageSliceConstIteratorWithIndex< ImageType3D > SliceIteratorTypeInput;
 typedef itk::ImageLinearIteratorWithIndex< BinaryImageType2D > LinearIteratorTypeBinary;
 typedef itk::ImageSliceConstIteratorWithIndex< BinaryImageType3D > SliceIteratorTypeBinary;
+typedef itk::Vector<double, 3> MeasurementVectorType;
+typedef itk::Statistics::ListSample<MeasurementVectorType> SampleType;
+typedef itk::FixedArray<double, 3> ImageSizeType;
+typedef itk::Statistics::KdTreeGenerator< SampleType > TreeGeneratorType;
+typedef TreeGeneratorType::KdTreeType TreeType;
+typedef TreeType::KdTreeNodeType      NodeType;
+typedef itk::Statistics::EuclideanDistanceMetric< MeasurementVectorType > DistanceMetricType;
 
 
 ImageType2D::Pointer       maxintprojection(ImageType3D::Pointer, unsigned int projectionDirection = 2);
@@ -89,10 +102,15 @@ void dumpmetadatadic(ImageType5D::Pointer);
 void dumpimageio(ReaderType::Pointer);
 void printSpacing(BinaryImageType3D::Pointer);
 ImageType3D::Pointer extractchannel(ImageType5D::Pointer, int channelnr);
-void printHistogram(ImageType3D::Pointer);
+void printHistogramNormalized(ImageType3D::Pointer);
 void write2D(ImageType2D::Pointer, std::string filenamepath);
 void write2D(BinaryImageType2D::Pointer, std::string filenamepath);
 std::string getFilename(std::string inputFileName, int seriesnr, int seriesCount, std::string suffix = "");
+void printObjectInfo(LabelImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType*);
+ImageSizeType getImSize(LabelImageToShapeLabelMapFilterType::Pointer labelImageToShapeLabelMapFilter, ImageSizeType imSize);
+void printCentroids(LabelImageToShapeLabelMapFilterType::Pointer);
+void printSampleVectors(SampleType::Pointer sample, ImageSizeType imSize);
+BinaryImageType3D::Pointer getBinaryIm(ImageType3D::Pointer);  
 int processSeries(std::string inputFileName, std::string outputdirectory, bool vflag, bool tflag, int fileNr, int seriesNr);
 
 

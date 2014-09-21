@@ -31,7 +31,7 @@ int nucleichannel      = 0;
 int bacteriachannel    = 1;
 int lysosomechannel    = 2;
 int binaryLowerThresholdBacteria = 200;
-int minNumberOfPixels = 100;
+double minNumberOfmm3 = 0.000000001;   // 1um3
 std::ofstream fileout;
 std::string fileoutName = "AA_results.txt";
 int numberOfStreamDivisions = 4;

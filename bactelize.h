@@ -21,6 +21,8 @@
 #include "itkMedianImageFilter.h"
 #include "itkBinaryThresholdImageFilter.h"
 #include "itkImageRegionIterator.h"
+
+#include "itkBinaryImageToShapeLabelMapFilter.h"
 #include "itkBinaryImageToLabelMapFilter.h"
 #include "itkLabelMapToLabelImageFilter.h"
 #include "itkLabelImageToShapeLabelMapFilter.h"
@@ -71,13 +73,12 @@ typedef itk::RescaleIntensityImageFilter< ImageType2D, ImageTypeWriter >  Rescal
 typedef itk::RescaleIntensityImageFilter< DoubleImageType3D, ImageType3D >  RescaleFilterTypeNormalized;
 typedef itk::MedianImageFilter< ImageType3D, ImageType3D > MedianFilterType;
 typedef itk::BinaryThresholdImageFilter< ImageType3D, BinaryImageType3D >  BinaryFilterType;
-typedef itk::BinaryImageToLabelMapFilter<BinaryImageType3D> BinaryImageToLabelMapFilterType;
-typedef itk::LabelMapToLabelImageFilter<BinaryImageToLabelMapFilterType::OutputImageType, BinaryImageType3D> LabelMapToLabelImageFilterType;
-typedef itk::LabelImageToShapeLabelMapFilter <BinaryImageType3D> LabelImageToShapeLabelMapFilterType;
+typedef itk::BinaryImageToShapeLabelMapFilter<BinaryImageType3D> BinaryImageToShapeLabelMapFilterType;
+typedef itk::LabelMapToLabelImageFilter<BinaryImageToShapeLabelMapFilterType::OutputImageType, BinaryImageType3D> LabelMapToLabelImageFilterType;
 typedef itk::LabelImageToStatisticsLabelMapFilter< BinaryImageType3D, ImageType3D > LabelImageToStatisticsLabelMapFilterType;
 typedef itk::LabelMapToAttributeImageFilter< LabelImageToStatisticsLabelMapFilterType::OutputImageType, ImageType3D,
    itk::Functor::MeanLabelObjectAccessor<LabelImageToStatisticsLabelMapFilterType::OutputImageType::LabelObjectType> > L2ImageType;
-typedef itk::LabelMapToBinaryImageFilter<BinaryImageToLabelMapFilterType::OutputImageType, BinaryImageType3D> LabelMapToBinaryImageFilterType;
+typedef itk::LabelMapToBinaryImageFilter<BinaryImageToShapeLabelMapFilterType::OutputImageType, BinaryImageType3D> LabelMapToBinaryImageFilterType;
 typedef itk::RGBPixel<unsigned char>   RGBPixelType;
 typedef itk::Image<RGBPixelType, 2>    RGBImageType;
 typedef itk::ScalarToRGBColormapImageFilter<ImageType2D, RGBImageType> RGBFilterType;
@@ -106,10 +107,13 @@ void printHistogramNormalized(ImageType3D::Pointer);
 void write2D(ImageType2D::Pointer, std::string filenamepath);
 void write2D(BinaryImageType2D::Pointer, std::string filenamepath);
 std::string getFilename(std::string inputFileName, int seriesnr, int seriesCount, std::string suffix = "");
-void printObjectInfo(LabelImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType*);
-ImageSizeType getImSize(LabelImageToShapeLabelMapFilterType::Pointer labelImageToShapeLabelMapFilter, ImageSizeType imSize);
-void printCentroids(LabelImageToShapeLabelMapFilterType::Pointer);
-void printSampleVectors(SampleType::Pointer sample, ImageSizeType imSize);
+void printObjectInfo(BinaryImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType*);
+void printShapeLabelObjects(BinaryImageToShapeLabelMapFilterType::Pointer);
+void excludeSmallObjects(BinaryImageToShapeLabelMapFilterType::Pointer, double minNumberOfmm3);
+SampleType::Pointer getCentroidsAsSample(BinaryImageToShapeLabelMapFilterType::Pointer);
+ImageSizeType getImSize(BinaryImageToShapeLabelMapFilterType::Pointer, ImageSizeType);
+void printCentroids(BinaryImageToShapeLabelMapFilterType::Pointer);
+void printSampleVectors(SampleType::Pointer, ImageSizeType);
 BinaryImageType3D::Pointer getBinaryIm(ImageType3D::Pointer);  
 int processSeries(std::string inputFileName, std::string outputdirectory, bool vflag, bool tflag, int fileNr, int seriesNr);
 

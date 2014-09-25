@@ -108,9 +108,14 @@ int main(int argc, char *argv[]) {
       }
     }
 
+  std::stringstream ssout;
+  for (int i=0; i<(argc); i++) {
+    ssout << argv[i];
+    ssout << " ";
+  }
   std::string fulloutputfilenameResults = outputdirectory + fileoutName;
   fileout.open(fulloutputfilenameResults.c_str()); 
-  fileout << "Bactelize!\n";
+  fileout << ssout.str();
   fileout.close();
   
   std::string dir = std::string(inputdirectory);

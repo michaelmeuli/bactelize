@@ -36,6 +36,8 @@ std::ofstream fileout;
 std::string fileoutName = "AA_results.txt";
 int numberOfStreamDivisions = 4;
 int numberOfBins = 50;
+double maxSingleObjectDiameter = 0.006;
+double minSearchRadius = 0.003;
 
 
 

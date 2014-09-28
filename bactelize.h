@@ -114,7 +114,10 @@ SampleType::Pointer getCentroidsAsSample(BinaryImageToShapeLabelMapFilterType::P
 ImageSizeType getImSize(BinaryImageToShapeLabelMapFilterType::Pointer, ImageSizeType);
 void printCentroids(BinaryImageToShapeLabelMapFilterType::Pointer);
 void printSampleVectors(SampleType::Pointer, ImageSizeType);
+void printSet(std::set<int> setToRemove);
+void excludeIfSet(BinaryImageToShapeLabelMapFilterType::Pointer, std::set<int>);
 BinaryImageType3D::Pointer getBinaryIm(ImageType3D::Pointer);  
+void excludeClusters(BinaryImageToShapeLabelMapFilterType::Pointer, int clustersize);
 int processSeries(std::string inputFileName, std::string outputdirectory, bool vflag, bool tflag, int fileNr, int seriesNr);
 
 

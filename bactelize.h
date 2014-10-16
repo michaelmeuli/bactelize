@@ -101,7 +101,7 @@ ImageType2D::Pointer       maxintprojection(ImageType3D::Pointer, unsigned int p
 BinaryImageType2D::Pointer maxintprojection(BinaryImageType3D::Pointer, unsigned int projectionDirection = 2);
 void dumpmetadatadic(ImageType5D::Pointer);
 void dumpimageio(ReaderType::Pointer);
-void printSpacing(BinaryImageType3D::Pointer);
+void printImInfo(BinaryImageType3D::Pointer);
 ImageType3D::Pointer extractchannel(ImageType5D::Pointer, int channelnr);
 void printHistogramNormalized(ImageType3D::Pointer);
 void write2D(ImageType2D::Pointer, std::string filenamepath);
@@ -109,15 +109,16 @@ void write2D(BinaryImageType2D::Pointer, std::string filenamepath);
 std::string getFilename(std::string inputFileName, int seriesnr, int seriesCount, std::string suffix = "");
 void printObjectInfo(BinaryImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType*);
 void printShapeLabelObjects(BinaryImageToShapeLabelMapFilterType::Pointer);
-void excludeSmallObjects(BinaryImageToShapeLabelMapFilterType::Pointer, double minNumberOfmm3);
+void printShapeLabelObjects(BinaryImageToShapeLabelMapFilterType::Pointer, ImageSizeType imSize);
 SampleType::Pointer getCentroidsAsSample(BinaryImageToShapeLabelMapFilterType::Pointer);
 ImageSizeType getImSize(BinaryImageToShapeLabelMapFilterType::Pointer, ImageSizeType);
 void printCentroids(BinaryImageToShapeLabelMapFilterType::Pointer);
 void printSampleVectors(SampleType::Pointer, ImageSizeType);
-void printSet(std::set<int> setToRemove);
 void excludeIfSet(BinaryImageToShapeLabelMapFilterType::Pointer, std::set<int>);
 BinaryImageType3D::Pointer getBinaryIm(ImageType3D::Pointer);  
-void excludeClusters(BinaryImageToShapeLabelMapFilterType::Pointer, int clustersize);
+void excludeSmallObjects(BinaryImageToShapeLabelMapFilterType::Pointer, double minNumberOfmm3);
+void excludeClusters(BinaryImageToShapeLabelMapFilterType::Pointer, int maxclustersize);
+void excludeLargeObjects(BinaryImageToShapeLabelMapFilterType::Pointer, double maxNumberOfmm3);
 int processSeries(std::string inputFileName, std::string outputdirectory, bool vflag, bool tflag, int fileNr, int seriesNr);
 
 

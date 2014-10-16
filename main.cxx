@@ -32,6 +32,8 @@ int bacteriachannel    = 1;
 int lysosomechannel    = 2;
 int binaryLowerThresholdBacteria = 200;
 double minNumberOfmm3 = 0.000000001;   // 1um3
+double maxNumberOfmm3 = 0.000000004;
+int maxclustersize = 2;
 std::ofstream fileout;
 std::string fileoutName = "AA_results.txt";
 int numberOfStreamDivisions = 4;
@@ -117,7 +119,7 @@ int main(int argc, char *argv[]) {
   }
   std::string fulloutputfilenameResults = outputdirectory + fileoutName;
   fileout.open(fulloutputfilenameResults.c_str()); 
-  fileout << ssout.str();
+  fileout << ssout.str() << std::endl;
   fileout.close();
   
   std::string dir = std::string(inputdirectory);

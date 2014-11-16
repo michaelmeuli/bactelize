@@ -33,13 +33,13 @@ int lysosomechannel    = 2;
 int binaryLowerThresholdBacteria = 200;
 double minNumberOfmm3 = 0.000000001;   // 1um3
 double maxNumberOfmm3 = 0.000000004;
-int maxclustersize = 2;
+int maxclustersize = 2;   // if there are more, they get excluded
 std::ofstream fileout;
 std::string fileoutName = "AA_results.txt";
 int numberOfStreamDivisions = 4;
 int numberOfBins = 50;
 double maxSingleObjectDiameter = 0.006;
-double minSearchRadius = 0.003;
+double minSearchRadius = 0.006;
 
 
 
@@ -90,9 +90,11 @@ int main(int argc, char *argv[]) {
 
   std::string inputdirectory = argv[1];
   std::string outputdirectory = argv[2];
+  std::string inputfile = "";
 
   bool vflag = false;
   bool tflag = false;
+  bool fflag = false;
   int fileNr = 0;
   int seriesNr = 0;
 
@@ -110,6 +112,14 @@ int main(int argc, char *argv[]) {
       tflag = true;
       i+=2;
       }
+    else if (strcmp (argv[i], "-f") == 0) {
+      if (i + 1 >= argc) {
+        return fail(argv);
+        }
+      inputfile = argv[i+1];
+      fflag = true;
+      i+=1;
+      }
     }
 
   std::stringstream ssout;
@@ -118,7 +128,7 @@ int main(int argc, char *argv[]) {
     ssout << " ";
   }
   std::string fulloutputfilenameResults = outputdirectory + fileoutName;
-  fileout.open(fulloutputfilenameResults.c_str()); 
+  fileout.open(fulloutputfilenameResults.c_str(), std::ofstream::app); 
   fileout << ssout.str() << std::endl;
   fileout.close();
   
@@ -136,8 +146,11 @@ int main(int argc, char *argv[]) {
   if (tflag) {
     processSeries(files[fileNr], outputdirectory, vflag, tflag, fileNr, seriesNr);
     }
+  else if (fflag) {
+    processSeries(inputfile, outputdirectory, vflag, tflag, fileNr, seriesNr);
+    }
   else {
-    for (unsigned int i = 0;i < files.size();i++) {
+    for (unsigned int i = 0; i < files.size();i++) {
       processSeries(files[i], outputdirectory, vflag, tflag, fileNr, seriesNr);
       fileout.open(fulloutputfilenameResults.c_str(), std::ofstream::app); 
       fileout << std::endl << std::endl;

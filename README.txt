@@ -1,7 +1,7 @@
-This program uses the InsightToolkit-4.6.0 with Module_SCIFIO=ON
+This program uses the InsightToolkit (compiled from most recent master on 2014/10/15) with Module_SCIFIO=ON
 
 To avoid SCIFIO throwhing exeption because of memory limits:
-export JAVA_FLAGS=-Xmx3400m
+export JAVA_FLAGS=-Xmx5400m
 
 Data to be analyzed for colocalization can be found here:
 https://www.dropbox.com/sh/t2z0f4jttcnfh8s/AADq21HNR7EwH1JFxskhXXhea
@@ -12,21 +12,11 @@ https://github.com/scifio/scifio-imageio/blob/master/test/itkSCIFIOImageIOTest.c
 Use of itkSCIFIOImageIOTest with ome-tiff files:
 ./SCIFIOTestDriver itkSCIFIOImageIOTest /path/to/dead-A.ome.tiff /path/to/dead-A.ome.tiff -w -a -d 5
 
-Known Bugs:
-Mark Hiner from SCIFIO (20.08.2014): 
-  "I'm assuming the # of planes to read isn't being updated for each series.. I'll look into it when I get a chance."
-
-Original .lif files have been converted with Bio-Formats 5.0.3 with:
+Original .lif files have been converted with Bio-Formats 5.0.5 with:
 ./bfconvert /path/to/live-A.lif /path/to/live-A.ome.tiff
 
-Bio-Formats 5.0.3 can be downloaded here:
-http://downloads.openmicroscopy.org/bio-formats/5.0.3/
-
-
-Some more code is taken from:
-http://www.itk.org/Insight/Doxygen/html/IO_2ImageReadExtractWrite_8cxx-example.html
-http://www.itk.org/Insight/Doxygen/html/Iterators_2ImageSliceIteratorWithIndex_8cxx-example.html
-InsightToolkit/Examples/Statistics/ImageHistogram4.cxx
+Bio-Formats 5.0.5 can be downloaded here:
+http://downloads.openmicroscopy.org/bio-formats/5.0.5/
 
 
 

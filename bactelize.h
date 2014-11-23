@@ -36,7 +36,9 @@
 #include "itkListSample.h"
 #include "itkWeightedCentroidKdTreeGenerator.h"
 #include "itkEuclideanDistanceMetric.h"
-
+#include "itkLabelMap.h"
+#include "itkStatisticsLabelObject.h"
+#include "itkShapeLabelObject.h"
 
 #include <fstream>
 #include <sstream>
@@ -73,11 +75,20 @@ typedef itk::RescaleIntensityImageFilter< ImageType2D, ImageTypeWriter >  Rescal
 typedef itk::RescaleIntensityImageFilter< DoubleImageType3D, ImageType3D >  RescaleFilterTypeNormalized;
 typedef itk::MedianImageFilter< ImageType3D, ImageType3D > MedianFilterType;
 typedef itk::BinaryThresholdImageFilter< ImageType3D, BinaryImageType3D >  BinaryFilterType;
-typedef itk::BinaryImageToShapeLabelMapFilter<BinaryImageType3D> BinaryImageToShapeLabelMapFilterType;
-typedef itk::LabelMapToLabelImageFilter<BinaryImageToShapeLabelMapFilterType::OutputImageType, BinaryImageType3D> LabelMapToLabelImageFilterType;
-typedef itk::LabelImageToStatisticsLabelMapFilter< BinaryImageType3D, ImageType3D > LabelImageToStatisticsLabelMapFilterType;
-typedef itk::LabelMapToAttributeImageFilter< LabelImageToStatisticsLabelMapFilterType::OutputImageType, ImageType3D,
-   itk::Functor::MeanLabelObjectAccessor<LabelImageToStatisticsLabelMapFilterType::OutputImageType::LabelObjectType> > L2ImageType;
+
+//typedef itk::BinaryImageToShapeLabelMapFilter<BinaryImageType3D> BinaryImageToShapeLabelMapFilterType;
+
+typedef itk::BinaryImageToShapeLabelMapFilter<BinaryImageType3D, itk::LabelMap< itk::StatisticsLabelObject< typename ImageType3D::PixelType, ImageType3D::ImageDimension > > > BinaryImageToShapeLabelMapFilterType;
+
+typedef itk::StatisticsLabelMapFilter<typename BinaryImageToShapeLabelMapFilterType::OutputImageType, ImageType3D> StatisticsLabelMapFilterType;
+
+//typedef itk::LabelMapToLabelImageFilter<BinaryImageToShapeLabelMapFilterType::OutputImageType, BinaryImageType3D> LabelMapToLabelImageFilterType;
+
+//typedef itk::LabelImageToStatisticsLabelMapFilter< BinaryImageType3D, ImageType3D > LabelImageToStatisticsLabelMapFilterType;
+
+typedef itk::LabelMapToAttributeImageFilter<StatisticsLabelMapFilterType::OutputImageType, ImageType3D,
+   itk::Functor::MeanLabelObjectAccessor<StatisticsLabelMapFilterType::OutputImageType::LabelObjectType> > L2ImageType;
+
 typedef itk::LabelMapToBinaryImageFilter<BinaryImageToShapeLabelMapFilterType::OutputImageType, BinaryImageType3D> LabelMapToBinaryImageFilterType;
 typedef itk::RGBPixel<unsigned char>   RGBPixelType;
 typedef itk::Image<RGBPixelType, 2>    RGBImageType;

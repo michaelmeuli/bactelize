@@ -113,8 +113,6 @@ void printShapeLabelObjects(BinaryImageToShapeLabelMapFilterType::Pointer);
 void printShapeLabelObjects(BinaryImageToShapeLabelMapFilterType::Pointer, ImageSizeType imSize);
 SampleType::Pointer getCentroidsAsSample(BinaryImageToShapeLabelMapFilterType::Pointer);
 ImageSizeType getImSize(BinaryImageToShapeLabelMapFilterType::Pointer, ImageSizeType);
-void printCentroids(BinaryImageToShapeLabelMapFilterType::Pointer);
-void printSampleVectors(SampleType::Pointer, ImageSizeType);
 void excludeIfSet(BinaryImageToShapeLabelMapFilterType::Pointer, std::set<int>);
 BinaryImageType3D::Pointer getBinaryIm(ImageType3D::Pointer);  
 void excludeSmallObjects(BinaryImageToShapeLabelMapFilterType::Pointer, double minNumberOfmm3);

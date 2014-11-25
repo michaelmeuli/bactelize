@@ -380,49 +380,12 @@ ImageSizeType getImSize(BinaryImageToShapeLabelMapFilterType::Pointer binaryImag
   }
 
 
-void printCentroids(BinaryImageToShapeLabelMapFilterType::Pointer binaryImageToShapeLabelMapFilter, ImageSizeType imSize) {
-  binaryImageToShapeLabelMapFilter->Update();
-  for(unsigned int i = 0; i < binaryImageToShapeLabelMapFilter->GetOutput()->GetNumberOfLabelObjects(); i++) {
-    BinaryImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType* labelObject = binaryImageToShapeLabelMapFilter->GetOutput()->GetNthLabelObject(i);
-    BinaryImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType::CentroidType centroid = labelObject->GetCentroid ();      
-    std::cout << "Centroid of object with label " << static_cast<int>(labelObject->GetLabel()) << " in %:  ";
-    for (unsigned int i = 0; i < imSize.Size(); i++) {
-      std::cout << centroid[i] / imSize[i] * 100 << "  ";
-      }
-    std::cout << std::endl;
-    } 
-  }
-
-
-void printSampleVectors(SampleType::Pointer sample, ImageSizeType imSize) {       
-  for (unsigned int i = 0; i < sample->Size(); i++) {
-    MeasurementVectorType queryPoint = sample->GetMeasurementVector(i);
-    std::cout << "MeasurementVector of sample i=" << i << " in %:  "; 
-    for (unsigned int i = 0; i < imSize.Size(); i++) {
-      std::cout << queryPoint[i] / imSize[i] * 100 << "  ";
-      }
-    std::cout << std::endl; 
-    }
-  }
-
-
-void excludeIfSet(BinaryImageToShapeLabelMapFilterType::Pointer binaryImageToShapeLabelMapFilter, std::set<int> setToRemove) {
-  std::vector<unsigned long> labelsToRemove;
+void excludeIfSet(BinaryImageToShapeLabelMapFilterType::Pointer binaryImageToShapeLabelMapFilter, std::set<int> labelsToRemove) {
   std::set<int>::const_iterator itr;
-  std::cout << "Labels which are set to be removed: ";
-  if (setToRemove.empty()) {
-    std::cout << "(nothing set to be removed)" << std::endl;
-    }
-  for (itr = setToRemove.begin(); itr != setToRemove.end(); ++itr) {
-    BinaryImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType* labelObject = binaryImageToShapeLabelMapFilter->GetOutput()->GetNthLabelObject(*itr);
-    std::cout << static_cast<int>(labelObject->GetLabel()) << "  "; 
-    labelsToRemove.push_back(labelObject->GetLabel());
-    }   
-  std::cout << std::endl;
   std::cout << "There are " << binaryImageToShapeLabelMapFilter->GetOutput()->GetNumberOfLabelObjects() << " shape label map objects." << std::endl;
   std::cout << "Removing " << labelsToRemove.size() << " objects from shape label map." << std::endl;
-  for(unsigned int i = 0; i < labelsToRemove.size(); ++i) {
-    BinaryImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType* labelObject = binaryImageToShapeLabelMapFilter->GetOutput()->GetLabelObject(labelsToRemove[i]);
+  for (itr = labelsToRemove.begin(); itr != labelsToRemove.end(); ++itr) {
+    BinaryImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType* labelObject = binaryImageToShapeLabelMapFilter->GetOutput()->GetLabelObject(*itr);
     BinaryImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType::CentroidType centroid = labelObject->GetCentroid ();   
     ImageSizeType imSize = getImSize(binaryImageToShapeLabelMapFilter);
     std::cout << "Removing object with label " << static_cast<int>(labelObject->GetLabel()) << " and centroid (in %):  ";
@@ -430,7 +393,7 @@ void excludeIfSet(BinaryImageToShapeLabelMapFilterType::Pointer binaryImageToSha
       std::cout << centroid[j] / imSize[j] * 100 << "  ";
       }
     std::cout << std::endl;
-    binaryImageToShapeLabelMapFilter->GetOutput()->RemoveLabel(labelsToRemove[i]);
+    binaryImageToShapeLabelMapFilter->GetOutput()->RemoveLabel(*itr);
     }
   std::cout << "There are " << binaryImageToShapeLabelMapFilter->GetOutput()->GetNumberOfLabelObjects() << " objects remaining in shape label map." << std::endl;
   std::cout << std::endl;
@@ -481,17 +444,7 @@ void excludeSmallObjects(BinaryImageToShapeLabelMapFilterType::Pointer binaryIma
 
 void excludeClusters(BinaryImageToShapeLabelMapFilterType::Pointer binaryImageToShapeLabelMapFilter, int maxclustersize) {
   binaryImageToShapeLabelMapFilter->Update();
-  std::cout << "Adding centroids to sample..." << std::endl;
   SampleType::Pointer sample = getCentroidsAsSample(binaryImageToShapeLabelMapFilter);
-
-  ImageSizeType imSize = getImSize(binaryImageToShapeLabelMapFilter);
-  std::cout << "Printing centroids in binaryImageToShapeLabelMapFilter..." << std::endl;
-  printCentroids(binaryImageToShapeLabelMapFilter, imSize);
-  std::cout << std::endl;
-  std::cout << "Printing MeasurementVectors in sample..." << std::endl;
-  printSampleVectors(sample, imSize);
-  std::cout << std::endl;
-
   TreeGeneratorType::Pointer treeGenerator = TreeGeneratorType::New();
   treeGenerator->SetSample(sample);
   treeGenerator->SetBucketSize(16);
@@ -501,7 +454,7 @@ void excludeClusters(BinaryImageToShapeLabelMapFilterType::Pointer binaryImageTo
   DistanceMetricType::Pointer distanceMetric = DistanceMetricType::New();
   DistanceMetricType::OriginType origin(3);
 
-  std::set<int> setToRemove;
+  std::set<int> labelsToRemove;
   for (unsigned int i = 0; i < sample->Size(); i++) {
     queryPoint = sample->GetMeasurementVector(i);     
     for ( unsigned int j = 0; j < sample->GetMeasurementVectorSize(); ++j ) {
@@ -539,7 +492,7 @@ void excludeClusters(BinaryImageToShapeLabelMapFilterType::Pointer binaryImageTo
 	  					binaryImageToShapeLabelMapFilter->GetOutput()->GetNthLabelObject(neighbors[k]);
         std::cout << "  Neighbor with label " << static_cast<int>(labelObjectNeighbor->GetLabel()) << " and a distance of: "; 
         std::cout << distanceMetric->Evaluate(tree->GetMeasurementVector(neighbors[k])) * 1000 << "um" << std::endl;
-        setToRemove.insert(neighbors[k]);         
+        labelsToRemove.insert(static_cast<int>(labelObjectNeighbor->GetLabel()));         
         }
       }
     else {
@@ -553,7 +506,7 @@ void excludeClusters(BinaryImageToShapeLabelMapFilterType::Pointer binaryImageTo
       }
     std::cout << std::endl;    
     }  
-  excludeIfSet(binaryImageToShapeLabelMapFilter, setToRemove);
+  excludeIfSet(binaryImageToShapeLabelMapFilter, labelsToRemove);
   }
 
 

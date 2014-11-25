@@ -75,33 +75,23 @@ typedef itk::RescaleIntensityImageFilter< ImageType2D, ImageTypeWriter >  Rescal
 typedef itk::RescaleIntensityImageFilter< DoubleImageType3D, ImageType3D >  RescaleFilterTypeNormalized;
 typedef itk::MedianImageFilter< ImageType3D, ImageType3D > MedianFilterType;
 typedef itk::BinaryThresholdImageFilter< ImageType3D, BinaryImageType3D >  BinaryFilterType;
-
-//typedef itk::BinaryImageToShapeLabelMapFilter<BinaryImageType3D> BinaryImageToShapeLabelMapFilterType;
-
-typedef itk::BinaryImageToShapeLabelMapFilter<BinaryImageType3D, itk::LabelMap< itk::StatisticsLabelObject< typename ImageType3D::PixelType, ImageType3D::ImageDimension > > > BinaryImageToShapeLabelMapFilterType;
-
-typedef itk::StatisticsLabelMapFilter<typename BinaryImageToShapeLabelMapFilterType::OutputImageType, ImageType3D> StatisticsLabelMapFilterType;
-
-//typedef itk::LabelMapToLabelImageFilter<BinaryImageToShapeLabelMapFilterType::OutputImageType, BinaryImageType3D> LabelMapToLabelImageFilterType;
-
-//typedef itk::LabelImageToStatisticsLabelMapFilter< BinaryImageType3D, ImageType3D > LabelImageToStatisticsLabelMapFilterType;
-
-typedef itk::LabelMapToAttributeImageFilter<StatisticsLabelMapFilterType::OutputImageType, ImageType3D,
-   itk::Functor::MeanLabelObjectAccessor<StatisticsLabelMapFilterType::OutputImageType::LabelObjectType> > L2ImageType;
-
-typedef itk::LabelMapToBinaryImageFilter<BinaryImageToShapeLabelMapFilterType::OutputImageType, BinaryImageType3D> LabelMapToBinaryImageFilterType;
-typedef itk::RGBPixel<unsigned char>   RGBPixelType;
-typedef itk::Image<RGBPixelType, 2>    RGBImageType;
-typedef itk::ScalarToRGBColormapImageFilter<ImageType2D, RGBImageType> RGBFilterType;
-typedef itk::ImageFileWriter<RGBImageType> WriterTypeRGB;
+typedef itk::BinaryImageToShapeLabelMapFilter< BinaryImageType3D, itk::LabelMap< itk::StatisticsLabelObject< ImageType3D::PixelType, ImageType3D::ImageDimension > > > BinaryImageToShapeLabelMapFilterType;
+typedef itk::StatisticsLabelMapFilter< BinaryImageToShapeLabelMapFilterType::OutputImageType, ImageType3D> StatisticsLabelMapFilterType;
+typedef itk::LabelMapToAttributeImageFilter< StatisticsLabelMapFilterType::OutputImageType, ImageType3D,
+   itk::Functor::MeanLabelObjectAccessor< StatisticsLabelMapFilterType::OutputImageType::LabelObjectType> > L2ImageType;
+typedef itk::LabelMapToBinaryImageFilter< BinaryImageToShapeLabelMapFilterType::OutputImageType, BinaryImageType3D > LabelMapToBinaryImageFilterType;
+typedef itk::RGBPixel <unsigned char >   RGBPixelType;
+typedef itk::Image< RGBPixelType, 2 >    RGBImageType;
+typedef itk::ScalarToRGBColormapImageFilter< ImageType2D, RGBImageType > RGBFilterType;
+typedef itk::ImageFileWriter< RGBImageType > WriterTypeRGB;
 typedef itk::TIFFImageIO TIFFIOType;
 typedef itk::ImageLinearIteratorWithIndex< ImageType2D > LinearIteratorTypeInput;
 typedef itk::ImageSliceConstIteratorWithIndex< ImageType3D > SliceIteratorTypeInput;
 typedef itk::ImageLinearIteratorWithIndex< BinaryImageType2D > LinearIteratorTypeBinary;
 typedef itk::ImageSliceConstIteratorWithIndex< BinaryImageType3D > SliceIteratorTypeBinary;
-typedef itk::Vector<double, 3> MeasurementVectorType;
-typedef itk::Statistics::ListSample<MeasurementVectorType> SampleType;
-typedef itk::FixedArray<double, 3> ImageSizeType;
+typedef itk::Vector< double, 3 > MeasurementVectorType;
+typedef itk::Statistics::ListSample< MeasurementVectorType > SampleType;
+typedef itk::FixedArray< double, 3 > ImageSizeType;
 typedef itk::Statistics::KdTreeGenerator< SampleType > TreeGeneratorType;
 typedef TreeGeneratorType::KdTreeType TreeType;
 typedef TreeType::KdTreeNodeType      NodeType;

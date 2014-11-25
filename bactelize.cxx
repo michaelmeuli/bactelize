@@ -422,6 +422,14 @@ void excludeIfSet(BinaryImageToShapeLabelMapFilterType::Pointer binaryImageToSha
   std::cout << "There are " << binaryImageToShapeLabelMapFilter->GetOutput()->GetNumberOfLabelObjects() << " shape label map objects." << std::endl;
   std::cout << "Removing " << labelsToRemove.size() << " objects from shape label map." << std::endl;
   for(unsigned int i = 0; i < labelsToRemove.size(); ++i) {
+    BinaryImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType* labelObject = binaryImageToShapeLabelMapFilter->GetOutput()->GetLabelObject(labelsToRemove[i]);
+    BinaryImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType::CentroidType centroid = labelObject->GetCentroid ();   
+    ImageSizeType imSize = getImSize(binaryImageToShapeLabelMapFilter);
+    std::cout << "Removing object with label " << static_cast<int>(labelObject->GetLabel()) << " and centroid (in %):  ";
+    for (unsigned int j = 0; j < imSize.Size(); j++) {
+      std::cout << centroid[j] / imSize[j] * 100 << "  ";
+      }
+    std::cout << std::endl;
     binaryImageToShapeLabelMapFilter->GetOutput()->RemoveLabel(labelsToRemove[i]);
     }
   std::cout << "There are " << binaryImageToShapeLabelMapFilter->GetOutput()->GetNumberOfLabelObjects() << " objects remaining in shape label map." << std::endl;
@@ -680,71 +688,21 @@ int processSeries(std::string inputFileName, std::string outputdirectory, bool v
     StatisticsLabelMapFilterType::Pointer statisticsLabelMapFilter = StatisticsLabelMapFilterType::New();
     statisticsLabelMapFilter->SetInput1(binaryImageToShapeLabelMapFilter->GetOutput());
     statisticsLabelMapFilter->SetInput2(image3Dred);
+    statisticsLabelMapFilter->InPlaceOn();
     statisticsLabelMapFilter->Update();
 
-
-    for(unsigned int i = 0; i < binaryImageToShapeLabelMapFilter->GetOutput()->GetNumberOfLabelObjects(); i++) {
-      BinaryImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType* labelObjectMe = binaryImageToShapeLabelMapFilter->GetOutput()->GetNthLabelObject(i);
+    unsigned int bacteriacount = statisticsLabelMapFilter->GetOutput()->GetNumberOfLabelObjects();
+    for(unsigned int i = 0; i < statisticsLabelMapFilter->GetOutput()->GetNumberOfLabelObjects(); i++) {
+      StatisticsLabelMapFilterType::OutputImageType::LabelObjectType* labelObjectMe = statisticsLabelMapFilter->GetOutput()->GetNthLabelObject(i);
       double mean = labelObjectMe->GetMean();
       fileout << mean << "\t";
       std::cout << "Mean value of object with label " << static_cast<int>(labelObjectMe->GetLabel()) << " in lysosomechannel: " << mean << std::endl; 
       }
-    
-    bool er = false;    
-    if (binaryImageToShapeLabelMapFilter->GetOutput()->GetNumberOfLabelObjects() == statisticsLabelMapFilter->GetOutput()->GetNumberOfLabelObjects()) {
-      std::cout << std::endl;
-      for(unsigned int i = 0; i < statisticsLabelMapFilter->GetOutput()->GetNumberOfLabelObjects(); i++) {
-        StatisticsLabelMapFilterType::OutputImageType::LabelObjectType* labelObjectSt = statisticsLabelMapFilter->GetOutput()->GetNthLabelObject(i);
-        int statLabel = static_cast<int>(labelObjectSt->GetLabel());
-        std::cout << std::setw(30) << "Label Statistics LabelMap: " << std::setw(5) << statLabel; 
-        StatisticsLabelMapFilterType::OutputImageType::LabelObjectType::CentroidType centroidSt = labelObjectSt->GetCentroid ();      
-        std::cout << std::setw(20) << "Centroid in %:";
-        for (unsigned int j = 0; j < imSize.Size(); j++) {
-          std::cout << std::setw(7) << std::setprecision(3) << std::setiosflags(std::ios::fixed) << centroidSt[j] / imSize[j] * 100 << "  ";
-          }
-        std::cout << std::endl;   
-        BinaryImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType* labelObjectBi = binaryImageToShapeLabelMapFilter->GetOutput()->GetNthLabelObject(i);
-        int binLabel = static_cast<int>(labelObjectBi->GetLabel());
-        std::cout << std::setw(30) << "Label Binary LabelMap: " << std::setw(5) << binLabel;  
-        BinaryImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType::CentroidType centroidBi = labelObjectBi->GetCentroid ();      
-        std::cout << std::setw(20) << "Centroid in %:";
-        for (unsigned int j = 0; j < imSize.Size(); j++) {
-          std::cout << std::setw(7) << std::setprecision(3) << std::setiosflags(std::ios::fixed) << centroidBi[j] / imSize[j] * 100 << "  ";
-          }
-        std::cout << std::endl << std::endl;
-        if (statLabel != binLabel) er = true;        
-        }   
-      std::cout << std::endl;
-
-      if (er) {
-        std::cout << "Error: Not the same label!" << std::endl;
-        fileout << "\n";
-        fileout.close();
-        } 
-      else {
-        unsigned int bacteriacount = statisticsLabelMapFilter->GetOutput()->GetNumberOfLabelObjects();
-        for(unsigned int i = 0; i < statisticsLabelMapFilter->GetOutput()->GetNumberOfLabelObjects(); i++) {
-          StatisticsLabelMapFilterType::OutputImageType::LabelObjectType* labelObjectMe = statisticsLabelMapFilter->GetOutput()->GetNthLabelObject(i);
-          double mean = labelObjectMe->GetMean();
-          fileout << mean << "\t";
-          std::cout << "Mean value of object with label " << static_cast<int>(labelObjectMe->GetLabel()) << " in lysosomechannel: " << mean << std::endl; 
-          }
-        fileout << "\n";
-        fileout.close();
-        std::cout << "Total bacteria counted (in statistics label map): " << bacteriacount << std::endl;
-        std::cout << std::endl;  
-        }  
-      } 
-    else {
-      std::cout << "Error: Number of LabelObjects not the same in StatisticsLabelMap!" << std::endl;
-      std::cout << "NumberOfLabelObjects Shape: " << static_cast<int>(binaryImageToShapeLabelMapFilter->GetOutput()->GetNumberOfLabelObjects()) << std::endl; 
-      std::cout << "NumberOfLabelObjects Statistics: " << static_cast<int>(statisticsLabelMapFilter->GetOutput()->GetNumberOfLabelObjects()) << std::endl;
-      fileout << "\n";
-      fileout.close();        
-      }
-
-
-
+    fileout << "\n";
+    fileout.close();
+    std::cout << "Total bacteria counted (in statisticsLabelMapFilter): " << bacteriacount << std::endl;
+    std::cout << std::endl;  
+      
     L2ImageType::Pointer labelMapToReadMeanImage = L2ImageType::New();
     labelMapToReadMeanImage->SetInput(statisticsLabelMapFilter->GetOutput());
     labelMapToReadMeanImage->Update();

@@ -1,3 +1,22 @@
+/*=========================================================================
+ *
+ *  Copyright Insight Software Consortium
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0.txt
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *=========================================================================*/
+
+
 #include "bactelize.h"
 
 extern int nucleichannel;
@@ -315,8 +334,29 @@ std::string getFilename(std::string inputFileName, int seriesnr, int seriesCount
   }
 
 
+ImageSizeType getImSize(BinaryImageToShapeLabelMapFilterType::Pointer binaryImageToShapeLabelMapFilter) {
+  binaryImageToShapeLabelMapFilter->Update();
+  BinaryImageToShapeLabelMapFilterType::OutputImageType::RegionType region = binaryImageToShapeLabelMapFilter->GetOutput()->GetLargestPossibleRegion();
+  const BinaryImageToShapeLabelMapFilterType::OutputImageType::SpacingType& spacing = binaryImageToShapeLabelMapFilter->GetOutput()->GetSpacing();
+  ImageSizeType imSize;
+  for (unsigned int i = 0; i < imSize.Size(); i++) {
+    imSize[i] = spacing[i] * region.GetSize(i);
+    }
+  return imSize;
+  }
+
+
+void printObjectLabelAndCentroid(BinaryImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType* labelObject, ImageSizeType imSize) {
+  BinaryImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType::CentroidType centroid = labelObject->GetCentroid ();   
+  std::cout << "Object with label " << static_cast<int>(labelObject->GetLabel()) << " and centroid:  ";
+  for (unsigned int j = 0; j < imSize.Size(); j++) {
+    std::cout << centroid[j] / imSize[j] * 100 << "%  ";
+    }
+  std::cout << std::endl;
+  }
+
+
 void printObjectInfo(BinaryImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType* labelObject) {
-  std::cout << "Label: " << static_cast<int>(labelObject->GetLabel()) << std::endl; 
   std::cout << "NumberOfPixels: " << labelObject->GetNumberOfPixels() << std::endl;
   std::cout << "PhysicalSize: " << (labelObject->GetPhysicalSize()) * 1000000000 << "um3" << std::endl;
   std::cout << "Elongation: " << labelObject->GetElongation() << std::endl;
@@ -328,23 +368,11 @@ void printObjectInfo(BinaryImageToShapeLabelMapFilterType::OutputImageType::Labe
 
 void printShapeLabelObjects(BinaryImageToShapeLabelMapFilterType::Pointer binaryImageToShapeLabelMapFilter) {
   binaryImageToShapeLabelMapFilter->Update();
-  for(unsigned int i = 0; i < binaryImageToShapeLabelMapFilter->GetOutput()->GetNumberOfLabelObjects(); i++) {
-    BinaryImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType* labelObject = binaryImageToShapeLabelMapFilter->GetOutput()->GetNthLabelObject(i);
-    printObjectInfo(labelObject);
-    std::cout << std::endl;
-    }    
-  }
-
-void printShapeLabelObjects(BinaryImageToShapeLabelMapFilterType::Pointer binaryImageToShapeLabelMapFilter, ImageSizeType imSize) {
-  binaryImageToShapeLabelMapFilter->Update();
+  ImageSizeType imSize = getImSize(binaryImageToShapeLabelMapFilter);
   for(unsigned int i = 0; i < binaryImageToShapeLabelMapFilter->GetOutput()->GetNumberOfLabelObjects(); i++) {
     BinaryImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType* labelObject = binaryImageToShapeLabelMapFilter->GetOutput()->GetNthLabelObject(i);
     BinaryImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType::CentroidType centroid = labelObject->GetCentroid ();      
-    std::cout << "Centroid in %:  ";
-    for (unsigned int i = 0; i < imSize.Size(); i++) {
-      std::cout << centroid[i] / imSize[i] * 100 << "  ";
-      }
-    std::cout << std::endl;
+    printObjectLabelAndCentroid(labelObject, imSize);  
     printObjectInfo(labelObject);
     std::cout << std::endl;
     }    
@@ -368,31 +396,14 @@ SampleType::Pointer getCentroidsAsSample(BinaryImageToShapeLabelMapFilterType::P
   }
 
 
-ImageSizeType getImSize(BinaryImageToShapeLabelMapFilterType::Pointer binaryImageToShapeLabelMapFilter) {
-  binaryImageToShapeLabelMapFilter->Update();
-  BinaryImageToShapeLabelMapFilterType::OutputImageType::RegionType region = binaryImageToShapeLabelMapFilter->GetOutput()->GetLargestPossibleRegion();
-  const BinaryImageToShapeLabelMapFilterType::OutputImageType::SpacingType& spacing = binaryImageToShapeLabelMapFilter->GetOutput()->GetSpacing();
-  ImageSizeType imSize;
-  for (unsigned int i = 0; i < imSize.Size(); i++) {
-    imSize[i] = spacing[i] * region.GetSize(i);
-    }
-  return imSize;
-  }
-
-
 void excludeIfSet(BinaryImageToShapeLabelMapFilterType::Pointer binaryImageToShapeLabelMapFilter, std::set<int> labelsToRemove) {
   std::set<int>::const_iterator itr;
-  std::cout << "There are " << binaryImageToShapeLabelMapFilter->GetOutput()->GetNumberOfLabelObjects() << " shape label map objects." << std::endl;
-  std::cout << "Removing " << labelsToRemove.size() << " objects from shape label map." << std::endl;
   for (itr = labelsToRemove.begin(); itr != labelsToRemove.end(); ++itr) {
     BinaryImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType* labelObject = binaryImageToShapeLabelMapFilter->GetOutput()->GetLabelObject(*itr);
     BinaryImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType::CentroidType centroid = labelObject->GetCentroid ();   
     ImageSizeType imSize = getImSize(binaryImageToShapeLabelMapFilter);
-    std::cout << "Removing object with label " << static_cast<int>(labelObject->GetLabel()) << " and centroid (in %):  ";
-    for (unsigned int j = 0; j < imSize.Size(); j++) {
-      std::cout << centroid[j] / imSize[j] * 100 << "  ";
-      }
-    std::cout << std::endl;
+    std::cout << "Removing:  ";
+    printObjectLabelAndCentroid(labelObject, imSize);   
     binaryImageToShapeLabelMapFilter->GetOutput()->RemoveLabel(*itr);
     }
   std::cout << "There are " << binaryImageToShapeLabelMapFilter->GetOutput()->GetNumberOfLabelObjects() << " objects remaining in shape label map." << std::endl;
@@ -433,12 +444,11 @@ void excludeSmallObjects(BinaryImageToShapeLabelMapFilterType::Pointer binaryIma
       labelsToRemove.push_back(labelObject->GetLabel());
       }
     }    
-  std::cout << "There are " << binaryImageToShapeLabelMapFilter->GetOutput()->GetNumberOfLabelObjects() << " shape label map objects." << std::endl;
   std::cout << "Removing " << labelsToRemove.size() << " objects from shape label map." << std::endl;
   for(unsigned int i = 0; i < labelsToRemove.size(); ++i) {
     binaryImageToShapeLabelMapFilter->GetOutput()->RemoveLabel(labelsToRemove[i]);
     }
-  std::cout << "There are " << binaryImageToShapeLabelMapFilter->GetOutput()->GetNumberOfLabelObjects() << " objects remaining in shape label map." << std::endl << std::endl;
+  std::cout << "There are " << binaryImageToShapeLabelMapFilter->GetOutput()->GetNumberOfLabelObjects() << " objects remaining in shape label map." << std::endl;
   }
   
 
@@ -455,6 +465,7 @@ void excludeClusters(BinaryImageToShapeLabelMapFilterType::Pointer binaryImageTo
   DistanceMetricType::OriginType origin(3);
 
   std::set<int> labelsToRemove;
+  ImageSizeType imSize = getImSize(binaryImageToShapeLabelMapFilter);
   for (unsigned int i = 0; i < sample->Size(); i++) {
     queryPoint = sample->GetMeasurementVector(i);     
     for ( unsigned int j = 0; j < sample->GetMeasurementVectorSize(); ++j ) {
@@ -472,59 +483,35 @@ void excludeClusters(BinaryImageToShapeLabelMapFilterType::Pointer binaryImageTo
         }
       }
     double radius = minSearchRadius;   
-    if (maxDiameter > maxSingleObjectDiameter) {
-      std::cout << "Size of object is too big to be one bacteria as " << std::endl; 
-      std::cout << " the maximum of the equivalent ellipsoid diameter is: " << maxDiameter * 1000 << "um" << std::endl;
-      if (maxDiameter/2 > minSearchRadius) {
-        std::cout << "Increasing search radius to " << maxDiameter/2 * 1000 << "um" << std::endl;
-        radius = maxDiameter/2;
-        }
-      }
+    if (maxDiameter/2 > minSearchRadius) {
+      radius = maxDiameter/2;
+      } 
 
     tree->Search(queryPoint, radius, neighbors); 
-    std::cout << "kd-tree radius search result:" << std::endl;
-    std::cout << "query point is object labeled " << static_cast<int>(labelObject->GetLabel()) << std::endl;   
-    std::cout << "search radius = " << radius * 1000 << "um" << std::endl;
-    if ((neighbors.size() > maxclustersize) || (maxDiameter/2 > minSearchRadius)) {   
-      std::cout << "Neighbors which are set to be removed in this query:" << std::endl;
-      for (unsigned int k = 0; k < neighbors.size(); ++k) {       
+    if ((neighbors.size() > maxclustersize) || (labelObject->GetPhysicalSize() > maxNumberOfmm3)) {
+      std::cout << "Centroid of object with label " << static_cast<int>(labelObject->GetLabel()) << " is set as query point." << std::endl;
+      if (radius > minSearchRadius) {
+        std::cout << "Search radis was increased to " << radius * 1000 << "um" << std::endl;
+        }
+      if (labelObject->GetPhysicalSize() > maxNumberOfmm3) {
+        std::cout << "Object with label " << static_cast<int>(labelObject->GetLabel()) << " is too big to be one bacteria: " << (labelObject->GetPhysicalSize()) * 1000000000 << "um3" << std::endl;
+        }
+      if (neighbors.size() > maxclustersize) {
+        std::cout << "Maximum cluster size was exceeded: " << neighbors.size() << " bacteria close to each other." << std::endl;
+        }
+      std::cout << "Object(s) which are set to be removed in this query:" << std::endl;
+      for (unsigned int k = 0; k < neighbors.size(); ++k) {  
         BinaryImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType* labelObjectNeighbor = 
-	  					binaryImageToShapeLabelMapFilter->GetOutput()->GetNthLabelObject(neighbors[k]);
-        std::cout << "  Neighbor with label " << static_cast<int>(labelObjectNeighbor->GetLabel()) << " and a distance of: "; 
+	    				binaryImageToShapeLabelMapFilter->GetOutput()->GetNthLabelObject(neighbors[k]);
+        printObjectLabelAndCentroid(labelObjectNeighbor, imSize);   
+        std::cout << "  Distance to query point: "; 
         std::cout << distanceMetric->Evaluate(tree->GetMeasurementVector(neighbors[k])) * 1000 << "um" << std::endl;
         labelsToRemove.insert(static_cast<int>(labelObjectNeighbor->GetLabel()));         
         }
-      }
-    else {
-      std::cout << "Neighbors which are not set to be removed in this query:" << std::endl;
-      for (unsigned int k = 0; k < neighbors.size(); ++k) {           
-        BinaryImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType* labelObjectNeighbor = 
-	  					binaryImageToShapeLabelMapFilter->GetOutput()->GetNthLabelObject(neighbors[k]);
-        std::cout << "  Neighbor with label " << static_cast<int>(labelObjectNeighbor->GetLabel()) << " and a distance of: "; 
-        std::cout << distanceMetric->Evaluate(tree->GetMeasurementVector(neighbors[k])) * 1000 << "um" << std::endl;
-        }
-      }
-    std::cout << std::endl;    
+      std::cout << std::endl;
+      }    
     }  
   excludeIfSet(binaryImageToShapeLabelMapFilter, labelsToRemove);
-  }
-
-
-void excludeLargeObjects(BinaryImageToShapeLabelMapFilterType::Pointer binaryImageToShapeLabelMapFilter, double maxNumberOfmm3) {
-  binaryImageToShapeLabelMapFilter->Update();
-  std::vector<unsigned long> labelsToRemove;
-  for(unsigned int i = 0; i < binaryImageToShapeLabelMapFilter->GetOutput()->GetNumberOfLabelObjects(); i++) {
-    BinaryImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType* labelObject = binaryImageToShapeLabelMapFilter->GetOutput()->GetNthLabelObject(i);
-    if (labelObject->GetPhysicalSize() > maxNumberOfmm3) {       
-      labelsToRemove.push_back(labelObject->GetLabel());
-      }
-    }    
-  std::cout << "There are " << binaryImageToShapeLabelMapFilter->GetOutput()->GetNumberOfLabelObjects() << " shape label map objects." << std::endl;
-  std::cout << "Removing " << labelsToRemove.size() << " objects from shape label map." << std::endl;
-  for(unsigned int i = 0; i < labelsToRemove.size(); ++i) {
-    binaryImageToShapeLabelMapFilter->GetOutput()->RemoveLabel(labelsToRemove[i]);
-    }
-  std::cout << "There are " << binaryImageToShapeLabelMapFilter->GetOutput()->GetNumberOfLabelObjects() << " objects remaining in shape label map." << std::endl << std::endl;
   }
 
 
@@ -606,7 +593,6 @@ int processSeries(std::string inputFileName, std::string outputdirectory, bool v
       printHistogramNormalized(image3Dbacteria);
       std::cout << std::endl;
       printImInfo(binaryimage3Dbacteria);
-      std::cout << std::endl;
       }
 
     std::string fulloutputfilenameResults = outputdirectory + fileoutName;
@@ -616,13 +602,13 @@ int processSeries(std::string inputFileName, std::string outputdirectory, bool v
 
     BinaryImageToShapeLabelMapFilterType::Pointer binaryImageToShapeLabelMapFilter = BinaryImageToShapeLabelMapFilterType::New();
     binaryImageToShapeLabelMapFilter->SetInput(binaryimage3Dbacteria);
-    LabelMapToBinaryImageFilterType::Pointer labelMapToBinaryImageFilter = LabelMapToBinaryImageFilterType::New();
-
+    binaryImageToShapeLabelMapFilter->Update();
     std::cout << std::endl;
-    std::cout << "Objects originally found in binaryImageToShapeLabelMapFilter..." << std::endl;
-    ImageSizeType imSize = getImSize(binaryImageToShapeLabelMapFilter);
-    printShapeLabelObjects(binaryImageToShapeLabelMapFilter, imSize);
+    std::cout << "Number of objects originally found in binaryImageToShapeLabelMapFilter: ";
+    std::cout << binaryImageToShapeLabelMapFilter->GetOutput()->GetNumberOfLabelObjects() << " objects." << std::endl;
+
     std::cout << "Writing 2D of original binaryImageToShapeLabelMapFilter..." << std::endl;
+    LabelMapToBinaryImageFilterType::Pointer labelMapToBinaryImageFilter = LabelMapToBinaryImageFilterType::New();
     labelMapToBinaryImageFilter->SetInput(binaryImageToShapeLabelMapFilter->GetOutput());
     labelMapToBinaryImageFilter->Update();
     BinaryImageType2D::Pointer binaryimage2Dbacteria = maxintprojection(labelMapToBinaryImageFilter->GetOutput());
@@ -630,13 +616,16 @@ int processSeries(std::string inputFileName, std::string outputdirectory, bool v
     std::string fulloutputfilenamebinary2Dbacteria = outputdirectory + outputfilenamebinary2Dbacteria; 
     std::cout << "Writing file: " << fulloutputfilenamebinary2Dbacteria << " ..." << std::endl;
     write2D(binaryimage2Dbacteria, fulloutputfilenamebinary2Dbacteria);
-
+    std::cout << std::endl;
     std::cout << "Removing objects which are less than " << minNumberOfmm3 * 1000000000 << " um3..." << std::endl;
     excludeSmallObjects(binaryImageToShapeLabelMapFilter, minNumberOfmm3);
-    std::cout << "Removing clusters of more than " << maxclustersize << " bacteria..." << std::endl;
+    std::cout << std::endl;
+    if (vflag) {
+      std::cout << "Objects remaining after exluding small objects:" << std::endl;
+      printShapeLabelObjects(binaryImageToShapeLabelMapFilter);
+      }
+    std::cout << "Removing clusters and clumps..." << std::endl;
     excludeClusters(binaryImageToShapeLabelMapFilter, maxclustersize);
-    std::cout << "Removing objects which are bigger than " << maxNumberOfmm3 * 1000000000 << " um3..." << std::endl;
-    excludeLargeObjects(binaryImageToShapeLabelMapFilter, maxNumberOfmm3);
 
     StatisticsLabelMapFilterType::Pointer statisticsLabelMapFilter = StatisticsLabelMapFilterType::New();
     statisticsLabelMapFilter->SetInput1(binaryImageToShapeLabelMapFilter->GetOutput());
@@ -682,7 +671,6 @@ int processSeries(std::string inputFileName, std::string outputdirectory, bool v
       }
     std::cout << std::endl;
   }
-  std::cout << std::endl;
   return EXIT_SUCCESS;
 }
 

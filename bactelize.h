@@ -1,3 +1,22 @@
+/*=========================================================================
+ *
+ *  Copyright Insight Software Consortium
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0.txt
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *
+ *=========================================================================*/
+
+
 #ifndef BACTELIZE_H
 #define BACTELIZE_H
 
@@ -108,16 +127,15 @@ void printHistogramNormalized(ImageType3D::Pointer);
 void write2D(ImageType2D::Pointer, std::string filenamepath);
 void write2D(BinaryImageType2D::Pointer, std::string filenamepath);
 std::string getFilename(std::string inputFileName, int seriesnr, int seriesCount, std::string suffix = "");
+ImageSizeType getImSize(BinaryImageToShapeLabelMapFilterType::Pointer, ImageSizeType);
+void printObjectLabelAndCentroid(BinaryImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType*);
 void printObjectInfo(BinaryImageToShapeLabelMapFilterType::OutputImageType::LabelObjectType*);
 void printShapeLabelObjects(BinaryImageToShapeLabelMapFilterType::Pointer);
-void printShapeLabelObjects(BinaryImageToShapeLabelMapFilterType::Pointer, ImageSizeType imSize);
 SampleType::Pointer getCentroidsAsSample(BinaryImageToShapeLabelMapFilterType::Pointer);
-ImageSizeType getImSize(BinaryImageToShapeLabelMapFilterType::Pointer, ImageSizeType);
 void excludeIfSet(BinaryImageToShapeLabelMapFilterType::Pointer, std::set<int>);
 BinaryImageType3D::Pointer getBinaryIm(ImageType3D::Pointer);  
 void excludeSmallObjects(BinaryImageToShapeLabelMapFilterType::Pointer, double minNumberOfmm3);
 void excludeClusters(BinaryImageToShapeLabelMapFilterType::Pointer, int maxclustersize);
-void excludeLargeObjects(BinaryImageToShapeLabelMapFilterType::Pointer, double maxNumberOfmm3);
 int processSeries(std::string inputFileName, std::string outputdirectory, bool vflag, bool tflag, int fileNr, int seriesNr);
 
 

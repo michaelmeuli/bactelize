@@ -4,7 +4,7 @@ To avoid SCIFIO throwhing exeption because of memory limits:
 export JAVA_FLAGS=-Xmx5400m
 
 Data to be analyzed for colocalization can be found here:
-https://www.dropbox.com/s/srcscgeovtoghco/wt%20dead%20C.lif?dl=0
+https://www.dropbox.com/sh/1wf039acdcr389f/AACgvRdRLDph1aTntTt1rSfva?dl=0
 
 Code for reading the files is taken from:
 https://github.com/scifio/scifio-imageio/blob/master/test/itkSCIFIOImageIOTest.cxx

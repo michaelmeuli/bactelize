@@ -6,6 +6,9 @@ export JAVA_FLAGS=-Xmx5400m
 Data to be analyzed for colocalization can be found here:
 https://www.dropbox.com/sh/1wf039acdcr389f/AACgvRdRLDph1aTntTt1rSfva?dl=0
 
+Known Bugs:
+image2DReadMean is not always correct
+
 Code for reading the files is taken from:
 https://github.com/scifio/scifio-imageio/blob/master/test/itkSCIFIOImageIOTest.cxx
 

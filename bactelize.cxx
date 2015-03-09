@@ -19,10 +19,11 @@
 
 #include "bactelize.h"
 
-extern int nucleichannel;
+extern int cellchannel;
 extern int bacteriachannel;
 extern int lysosomechannel;
 extern int binaryLowerThresholdBacteria;
+extern int cellInsideThreshold;
 extern double minNumberOfmm3;  
 extern double maxNumberOfmm3;
 extern int maxclustersize;
@@ -494,7 +495,8 @@ void excludeClusters(BinaryImageToShapeLabelMapFilterType::Pointer binaryImageTo
         std::cout << "Search radis was increased to " << radius * 1000 << "um" << std::endl;
         }
       if (labelObject->GetPhysicalSize() > maxNumberOfmm3) {
-        std::cout << "Object with label " << static_cast<int>(labelObject->GetLabel()) << " is too big to be one bacteria: " << (labelObject->GetPhysicalSize()) * 1000000000 << "um3" << std::endl;
+        std::cout << "Object with label " << static_cast<int>(labelObject->GetLabel()) << " is too big to be one bacteria: " 
+                  << (labelObject->GetPhysicalSize()) * 1000000000 << "um3" << std::endl;
         }
       if (neighbors.size() > maxclustersize) {
         std::cout << "Maximum cluster size was exceeded: " << neighbors.size() << " bacteria close to each other." << std::endl;
@@ -513,6 +515,69 @@ void excludeClusters(BinaryImageToShapeLabelMapFilterType::Pointer binaryImageTo
     }  
   excludeIfSet(binaryImageToShapeLabelMapFilter, labelsToRemove);
   }
+
+
+
+
+
+void excludeOutside(BinaryImageToShapeLabelMapFilterType::Pointer binaryImageToShapeLabelMapFilter, 
+	            ImageType3D::Pointer image3Dcell) {
+  binaryImageToShapeLabelMapFilter->Update();
+  std::vector<unsigned long> labelsToRemove;
+  StatisticsLabelMapFilterType::Pointer statisticsLabelMapFilter = StatisticsLabelMapFilterType::New();
+  statisticsLabelMapFilter->SetInput1(binaryImageToShapeLabelMapFilter->GetOutput());
+  statisticsLabelMapFilter->SetInput2(image3Dcell);
+  statisticsLabelMapFilter->InPlaceOn();
+  statisticsLabelMapFilter->Update();
+
+  for(unsigned int i = 0; i < statisticsLabelMapFilter->GetOutput()->GetNumberOfLabelObjects(); i++) {
+    StatisticsLabelMapFilterType::OutputImageType::LabelObjectType* labelObject = 
+      statisticsLabelMapFilter->GetOutput()->GetNthLabelObject(i);
+    std::cout << "Mean value of object with label " << static_cast<int>(labelObject->GetLabel()) << " in cellchannel: " 
+              << labelObject->GetMean() << std::endl; 
+    if (labelObject->GetMean() < cellInsideThreshold) {       
+      labelsToRemove.push_back(labelObject->GetLabel());
+      }
+    }
+  std::cout << "Removing " << labelsToRemove.size() << " objects from shape label map." << std::endl;
+  for(unsigned int i = 0; i < labelsToRemove.size(); ++i) {
+    binaryImageToShapeLabelMapFilter->GetOutput()->RemoveLabel(labelsToRemove[i]);
+    }
+  std::cout << "There are " << binaryImageToShapeLabelMapFilter->GetOutput()->GetNumberOfLabelObjects() 
+            << " objects remaining in shape label map." << std::endl;
+  }
+
+
+
+
+
+void writeMeanResults(StatisticsLabelMapFilterType::Pointer statisticsLabelMapFilter, 
+                      BinaryImageToShapeLabelMapFilterType::Pointer binaryImageToShapeLabelMapFilter, 
+	              ImageType3D::Pointer image3Dred, 
+                      std::string fulloutputfilenameResults, std::string seriesName) {
+  statisticsLabelMapFilter->SetInput1(binaryImageToShapeLabelMapFilter->GetOutput());
+  statisticsLabelMapFilter->SetInput2(image3Dred);
+  statisticsLabelMapFilter->InPlaceOn();
+  statisticsLabelMapFilter->Update();
+
+  fileout.open(fulloutputfilenameResults.c_str(), std::ofstream::app); 
+  fileout << seriesName << "\t";
+  unsigned int bacteriacount = statisticsLabelMapFilter->GetOutput()->GetNumberOfLabelObjects();
+  for(unsigned int i = 0; i < statisticsLabelMapFilter->GetOutput()->GetNumberOfLabelObjects(); i++) {
+    StatisticsLabelMapFilterType::OutputImageType::LabelObjectType* labelObjectMe = 
+      statisticsLabelMapFilter->GetOutput()->GetNthLabelObject(i);
+    double mean = labelObjectMe->GetMean();
+    fileout << mean << "\t";
+    std::cout << "Mean value of object with label " << static_cast<int>(labelObjectMe->GetLabel()) << " in lysosomechannel: " 
+              << mean << std::endl; 
+    }
+  fileout << "\n";
+  fileout.close();
+  std::cout << "Total bacteria counted (in statisticsLabelMapFilter): " << bacteriacount << std::endl;
+  std::cout << std::endl;  
+  }
+
+
 
 
 int processSeries(std::string inputFileName, std::string outputdirectory, bool vflag, bool tflag, int fileNr, int seriesNr) {
@@ -560,15 +625,15 @@ int processSeries(std::string inputFileName, std::string outputdirectory, bool v
     std::cout << "Reading seriesnr: " << seriesnr << std::endl;
     image5D = streamer->GetOutput();
 
-    ImageType3D::Pointer image3Dnuclei = extractchannel(image5D, nucleichannel);
+    ImageType3D::Pointer image3Dcell = extractchannel(image5D, cellchannel);
     ImageType3D::Pointer image3Dbacteria = extractchannel(image5D, bacteriachannel);
     ImageType3D::Pointer image3Dred = extractchannel(image5D, lysosomechannel);
 
-    ImageType2D::Pointer image2Dnuclei = maxintprojection(image3Dnuclei);
-    std::string outputfilename2Dnuclei = getFilename(inputFileName, seriesnr, seriesEnd, "_a_nuclei.tiff");
-    std::string fulloutputfilename2Dnuclei = outputdirectory + outputfilename2Dnuclei; 
-    std::cout << "Writing file: " << fulloutputfilename2Dnuclei << " ..." << std::endl;
-    write2D(image2Dnuclei, fulloutputfilename2Dnuclei);
+    ImageType2D::Pointer image2Dcell = maxintprojection(image3Dcell);
+    std::string outputfilename2Dcell = getFilename(inputFileName, seriesnr, seriesEnd, "_a_cell.tiff");
+    std::string fulloutputfilename2Dcell = outputdirectory + outputfilename2Dcell; 
+    std::cout << "Writing file: " << fulloutputfilename2Dcell << " ..." << std::endl;
+    write2D(image2Dcell, fulloutputfilename2Dcell);
 
     ImageType2D::Pointer image2Dbacteria = maxintprojection(image3Dbacteria);
     std::string outputfilename2Dbacteria = getFilename(inputFileName, seriesnr, seriesEnd, "_b_bacteria.tiff");
@@ -595,11 +660,6 @@ int processSeries(std::string inputFileName, std::string outputdirectory, bool v
       printImInfo(binaryimage3Dbacteria);
       }
 
-    std::string fulloutputfilenameResults = outputdirectory + fileoutName;
-    fileout.open(fulloutputfilenameResults.c_str(), std::ofstream::app); 
-    std::string seriesName = getFilename(inputFileName, seriesnr, seriesEnd);
-    fileout << seriesName << "\t";
-
     BinaryImageToShapeLabelMapFilterType::Pointer binaryImageToShapeLabelMapFilter = BinaryImageToShapeLabelMapFilterType::New();
     binaryImageToShapeLabelMapFilter->SetInput(binaryimage3Dbacteria);
     binaryImageToShapeLabelMapFilter->Update();
@@ -619,6 +679,9 @@ int processSeries(std::string inputFileName, std::string outputdirectory, bool v
     std::cout << std::endl;
     std::cout << "Removing objects which are less than " << minNumberOfmm3 * 1000000000 << " um3..." << std::endl;
     excludeSmallObjects(binaryImageToShapeLabelMapFilter, minNumberOfmm3);
+    std::cout << "Removing objects outside of macrophages..." << std::endl;
+    excludeOutside(binaryImageToShapeLabelMapFilter, image3Dcell);
+
     std::cout << std::endl;
     if (vflag) {
       std::cout << "Objects remaining after exluding small objects:" << std::endl;
@@ -627,26 +690,14 @@ int processSeries(std::string inputFileName, std::string outputdirectory, bool v
     std::cout << "Removing clusters and clumps..." << std::endl;
     excludeClusters(binaryImageToShapeLabelMapFilter, maxclustersize);
 
-    StatisticsLabelMapFilterType::Pointer statisticsLabelMapFilter = StatisticsLabelMapFilterType::New();
-    statisticsLabelMapFilter->SetInput1(binaryImageToShapeLabelMapFilter->GetOutput());
-    statisticsLabelMapFilter->SetInput2(image3Dred);
-    statisticsLabelMapFilter->InPlaceOn();
-    statisticsLabelMapFilter->Update();
-
-    unsigned int bacteriacount = statisticsLabelMapFilter->GetOutput()->GetNumberOfLabelObjects();
-    for(unsigned int i = 0; i < statisticsLabelMapFilter->GetOutput()->GetNumberOfLabelObjects(); i++) {
-      StatisticsLabelMapFilterType::OutputImageType::LabelObjectType* labelObjectMe = statisticsLabelMapFilter->GetOutput()->GetNthLabelObject(i);
-      double mean = labelObjectMe->GetMean();
-      fileout << mean << "\t";
-      std::cout << "Mean value of object with label " << static_cast<int>(labelObjectMe->GetLabel()) << " in lysosomechannel: " << mean << std::endl; 
-      }
-    fileout << "\n";
-    fileout.close();
-    std::cout << "Total bacteria counted (in statisticsLabelMapFilter): " << bacteriacount << std::endl;
-    std::cout << std::endl;  
-      
+    std::string fulloutputfilenameResults = outputdirectory + fileoutName;
+    std::string seriesName = getFilename(inputFileName, seriesnr, seriesEnd);
+    StatisticsLabelMapFilterType::Pointer statisticsLabelMapFilterLysosome = StatisticsLabelMapFilterType::New();
+    writeMeanResults(statisticsLabelMapFilterLysosome, binaryImageToShapeLabelMapFilter, image3Dred, 
+                     fulloutputfilenameResults, seriesName);
+   
     L2ImageType::Pointer labelMapToReadMeanImage = L2ImageType::New();
-    labelMapToReadMeanImage->SetInput(statisticsLabelMapFilter->GetOutput());
+    labelMapToReadMeanImage->SetInput(statisticsLabelMapFilterLysosome->GetOutput());
     labelMapToReadMeanImage->Update();
     ImageType3D::Pointer image3DbacteriaReadMean = labelMapToReadMeanImage->GetOutput();
     ImageType2D::Pointer image2DReadMean = maxintprojection(image3DbacteriaReadMean);

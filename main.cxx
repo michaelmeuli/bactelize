@@ -28,10 +28,11 @@
 #include <algorithm>
 
 
-int nucleichannel      = 0;
+int cellchannel      = 0;
 int bacteriachannel    = 1;
 int lysosomechannel    = 2;
 int binaryLowerThresholdBacteria = 200;
+int cellInsideThreshold = 1;
 double minNumberOfmm3 = 0.000000001;   // 1um3
 double maxNumberOfmm3 = 0.000000004;
 int maxclustersize = 2;   // if there are more, they get excluded

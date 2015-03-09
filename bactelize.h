@@ -136,6 +136,12 @@ void excludeIfSet(BinaryImageToShapeLabelMapFilterType::Pointer, std::set<int>);
 BinaryImageType3D::Pointer getBinaryIm(ImageType3D::Pointer);  
 void excludeSmallObjects(BinaryImageToShapeLabelMapFilterType::Pointer, double minNumberOfmm3);
 void excludeClusters(BinaryImageToShapeLabelMapFilterType::Pointer, int maxclustersize);
+void excludeOutside(BinaryImageToShapeLabelMapFilterType::Pointer binaryImageToShapeLabelMapFilter, 
+	            ImageType3D::Pointer image3Dcell);
+void writeMeanResults(StatisticsLabelMapFilterType::Pointer statisticsLabelMapFilter, 
+                      BinaryImageToShapeLabelMapFilterType::Pointer binaryImageToShapeLabelMapFilter, 
+	              ImageType3D::Pointer image3Dred, 
+                      std::string fulloutputfilenameResults, std::string seriesName);
 int processSeries(std::string inputFileName, std::string outputdirectory, bool vflag, bool tflag, int fileNr, int seriesNr);
 
 

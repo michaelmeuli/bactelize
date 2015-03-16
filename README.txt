@@ -1,10 +1,10 @@
-This program uses the InsightToolkit (compiled from most recent master on 2014/10/15) with Module_SCIFIO=ON
+This program uses the "Insight Segmentation and Registration Toolkit (ITK) 4.7" with Module_SCIFIO=ON
 
 To avoid SCIFIO throwhing exeption because of memory limits:
 export JAVA_FLAGS=-Xmx5400m
 
 Data to be analyzed for colocalization can be found here:
-https://www.dropbox.com/sh/1wf039acdcr389f/AACgvRdRLDph1aTntTt1rSfva?dl=0
+https://www.dropbox.com/sh/pe0aj43ts114b1p/AABhaM6KkUvczEkq1a73Op5Ia?dl=0
 
 Known Bugs:
 image2DReadMean is not always correct

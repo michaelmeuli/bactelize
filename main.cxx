@@ -28,19 +28,18 @@
 #include <algorithm>
 
 
-int cellchannel      = 0;
-int bacteriachannel    = 1;
-int lysosomechannel    = 2;
-int binaryLowerThresholdBacteria = 200;
-int cellInsideThreshold = 1;
-double minNumberOfmm3 = 0.000000001;   // 1um3
-double maxNumberOfmm3 = 0.000000004;
+int cellchannel      = 2;
+int bacteriachannel    = 0;
+int lysosomechannel    = 1;
+int binaryLowerThresholdBacteria = 400;
+int cellInsideThreshold = 20;
+double minNumberOfmm3 = 0.0000000005;   // 1um3: 0.000000001
+double maxNumberOfmm3 = 0.000000006;   // increased from 0.000000004 to 0.000000010 back to 0.000000006
 int maxclustersize = 2;   // if there are more, they get excluded
 std::ofstream fileout;
 std::string fileoutName = "AA_results.txt";
 int numberOfStreamDivisions = 4;
 int numberOfBins = 50;
-double maxSingleObjectDiameter = 0.006;
 double minSearchRadius = 0.006;
 
 

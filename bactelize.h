@@ -28,7 +28,6 @@
 #include "itkMetaDataObject.h"
 #include "itkMetaDataDictionary.h"
 #include "itkImageIOBase.h"
-#include "itkSCIFIOImageIO.h"
 #include "itkExtractImageFilter.h"
 #include "itksys/SystemTools.hxx"
 #include "vnl/vnl_math.h"

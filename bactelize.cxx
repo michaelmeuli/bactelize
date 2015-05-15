@@ -31,7 +31,6 @@ extern std::ofstream fileout;
 extern std::string fileoutName;
 extern int numberOfStreamDivisions;
 extern int numberOfBins;
-extern double maxSingleObjectDiameter;
 extern double minSearchRadius;
 
 
@@ -492,7 +491,7 @@ void excludeClusters(BinaryImageToShapeLabelMapFilterType::Pointer binaryImageTo
     if ((neighbors.size() > maxclustersize) || (labelObject->GetPhysicalSize() > maxNumberOfmm3)) {
       std::cout << "Centroid of object with label " << static_cast<int>(labelObject->GetLabel()) << " is set as query point." << std::endl;
       if (radius > minSearchRadius) {
-        std::cout << "Search radis was increased to " << radius * 1000 << "um" << std::endl;
+        std::cout << "Search radius was increased to " << radius * 1000 << "um" << std::endl;
         }
       if (labelObject->GetPhysicalSize() > maxNumberOfmm3) {
         std::cout << "Object with label " << static_cast<int>(labelObject->GetLabel()) << " is too big to be one bacteria: " 
@@ -530,12 +529,19 @@ void excludeOutside(BinaryImageToShapeLabelMapFilterType::Pointer binaryImageToS
   statisticsLabelMapFilter->InPlaceOn();
   statisticsLabelMapFilter->Update();
 
+  ImageSizeType imSize = getImSize(binaryImageToShapeLabelMapFilter);
   for(unsigned int i = 0; i < statisticsLabelMapFilter->GetOutput()->GetNumberOfLabelObjects(); i++) {
     StatisticsLabelMapFilterType::OutputImageType::LabelObjectType* labelObject = 
       statisticsLabelMapFilter->GetOutput()->GetNthLabelObject(i);
-    std::cout << "Mean value of object with label " << static_cast<int>(labelObject->GetLabel()) << " in cellchannel: " 
+    printObjectLabelAndCentroid(labelObject, imSize);   
+    std::cout << "  Mean value of object with label " << static_cast<int>(labelObject->GetLabel()) << " in cellchannel: " 
               << labelObject->GetMean() << std::endl; 
-    if (labelObject->GetMean() < cellInsideThreshold) {       
+    if (labelObject->GetMean() < cellInsideThreshold) { 
+      printObjectLabelAndCentroid(labelObject, imSize); 
+      std::cout << "  Object with label " << static_cast<int>(labelObject->GetLabel()) << " will be excluded." << std::endl;  
+      std::cout << "    Mean value in cellchannel is: " << labelObject->GetMean() << std::endl; 
+      std::cout << "    cellInsideThreshold is: " << cellInsideThreshold << std::endl; 
+      printObjectLabelAndCentroid(labelObject, imSize); 
       labelsToRemove.push_back(labelObject->GetLabel());
       }
     }
@@ -679,6 +685,7 @@ int processSeries(std::string inputFileName, std::string outputdirectory, bool v
     std::cout << std::endl;
     std::cout << "Removing objects which are less than " << minNumberOfmm3 * 1000000000 << " um3..." << std::endl;
     excludeSmallObjects(binaryImageToShapeLabelMapFilter, minNumberOfmm3);
+    std::cout << std::endl;
     std::cout << "Removing objects outside of macrophages..." << std::endl;
     excludeOutside(binaryImageToShapeLabelMapFilter, image3Dcell);
 

@@ -21,6 +21,9 @@ http://downloads.openmicroscopy.org/bio-formats/5.0.5/
 Use of itkSCIFIOImageIOTest with ome-tiff files:
 ./SCIFIOTestDriver itkSCIFIOImageIOTest /path/to/dead-A.ome.tiff /path/to/dead-A.ome.tiff -w -a -d 5
 
+On a fresh Ubuntu 14.04 install you might want to do first:
+sudo apt-get install subversion gcc g++ libX11-dev libXt-dev libgl1-mesa-dev libosmesa6-dev libglu1-mesa-dev git cmake cmake-curses-gui build-essential git-core
+
 
 
 
